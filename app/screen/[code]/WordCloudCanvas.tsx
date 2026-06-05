@@ -23,8 +23,10 @@ function cloudColor(word: string) {
   return COLORS[wordHash(word) % COLORS.length];
 }
 
-function getRotation(word: string): number {
-  return wordHash(word) % 7 === 0 ? -90 : 0;
+// Sort words by hash for stable pseudo-random ordering, then rotate every Nth
+function buildRotationSet(words: WordEntry[], every: number): Set<string> {
+  const sorted = [...words].sort((a, b) => wordHash(a.word) - wordHash(b.word));
+  return new Set(sorted.filter((_, i) => i % every === 0).map((w) => w.word));
 }
 
 function makeRandom(seed: number) {
@@ -50,14 +52,15 @@ function runLayout(
   width: number,
   height: number,
   seed: number,
-  padding: number
+  padding: number,
+  toRotate: Set<string>
 ): Promise<LayoutWord[]> {
   return new Promise((resolve) => {
     cloud<LayoutWord>()
       .size([width, height])
       .words(candidates)
       .padding(padding)
-      .rotate((d) => getRotation((d as LayoutWord).text ?? ""))
+      .rotate((d) => toRotate.has((d as LayoutWord).text ?? "") ? -90 : 0)
       .font("Bahnschrift, Oswald, sans-serif")
       .fontSize((d) => d.size)
       .random(makeRandom(seed))
@@ -120,6 +123,7 @@ export default function WordCloudCanvas({
 
     const seed = getSeed(words);
     const isFirstRender = prevNames.size === 0;
+    const toRotate = buildRotationSet(words, 7);
 
     async function layout() {
       // d3-cloud measures text via canvas — wait for fonts so metrics are correct
@@ -144,7 +148,8 @@ export default function WordCloudCanvas({
           width,
           height,
           seed,
-          Math.max(2, Math.round(10 * scale))
+          Math.max(2, Math.round(10 * scale)),
+          toRotate
         );
 
         if (placed.length >= words.length) break;
