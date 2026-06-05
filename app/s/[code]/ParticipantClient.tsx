@@ -11,6 +11,8 @@ type Question = {
   options: string[];
   position: number;
   is_open: boolean;
+  duration_seconds: number | null;
+  opened_at: string | null;
 };
 
 type Session = {
@@ -21,6 +23,39 @@ type Session = {
   current_question_id: string | null;
   questions: Question[];
 };
+
+/* ── Countdown ──────────────────────────────────────────────── */
+
+function useCountdown(openedAt: string | null, durationSec: number | null) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    if (!openedAt || !durationSec) { setRemaining(null); return; }
+    const end = new Date(openedAt).getTime() + durationSec * 1000;
+    const tick = () => setRemaining(Math.max(0, Math.round((end - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [openedAt, durationSec]);
+  return remaining;
+}
+
+function fmtTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function ParticipantTimer({ openedAt, durationSec }: { openedAt: string | null; durationSec: number | null }) {
+  const remaining = useCountdown(openedAt, durationSec);
+  if (remaining === null) return null;
+  const urgent = remaining <= 30;
+  const expired = remaining === 0;
+  return (
+    <span className={`${s.timerTag} ${urgent ? s.timerUrgent : ""} ${expired ? s.timerExpired : ""}`}>
+      {expired ? "LUKKER…" : `⏱ ${fmtTime(remaining)}`}
+    </span>
+  );
+}
 
 /* ── Design ─────────────────────────────────────────────────── */
 
@@ -133,7 +168,10 @@ function ActiveScreen({
   return (
     <div className={s.screen}>
       <TopBar right={
-        <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
       } />
       <div className={s.qHead}>
         <h1 className={s.qText}>{question.prompt}</h1>
@@ -163,14 +201,21 @@ function SubmittedScreen({
   optionLabel,
   optionIndex,
   qNum,
+  question,
 }: {
   optionLabel: string;
   optionIndex: number;
   qNum: number;
+  question: Question;
 }) {
   return (
     <div className={s.screen}>
-      <TopBar right={<span className={s.tag}>SPØRGSMÅL {qNum}</span>} />
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
       <div className={`${s.main} ${s.center}`}>
         <CheckRing sm />
         <div className={s.submittedLabel}>DU SVAREDE</div>
@@ -335,6 +380,7 @@ export default function ParticipantClient({ code }: { code: string }) {
         optionLabel={currentQ.options[votedIndex] ?? "?"}
         optionIndex={votedIndex}
         qNum={qNum}
+        question={currentQ}
       />
     );
   }

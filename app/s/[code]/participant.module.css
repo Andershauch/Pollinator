@@ -59,6 +59,23 @@
 
 .tagMuted { color: var(--faint); }
 
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timerTag {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--c2);
+  font-variant-numeric: tabular-nums;
+}
+
+.timerUrgent { color: var(--c1); }
+.timerExpired { color: var(--c4); }
+
 .statusOk {
   display: inline-flex;
   align-items: center;
