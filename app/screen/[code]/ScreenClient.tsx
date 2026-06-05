@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
+
+const WordCloudCanvas = dynamic(() => import("./WordCloudCanvas"), { ssr: false });
 import { QRCodeSVG } from "qrcode.react";
 import {
   BarChart, Bar, XAxis, YAxis,
@@ -285,19 +288,6 @@ function ResultsScreen({
 
 /* ── Word cloud screen ──────────────────────────────────────── */
 
-const CLOUD_COLORS = [
-  "oklch(0.82 0.155 78)",
-  "oklch(0.79 0.15 158)",
-  "oklch(0.73 0.15 248)",
-  "oklch(0.72 0.165 330)",
-];
-
-function cloudColor(word: string) {
-  let h = 0;
-  for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) & 0xfffffff;
-  return CLOUD_COLORS[Math.abs(h) % CLOUD_COLORS.length];
-}
-
 function WordCloudScreen({
   session,
   words,
@@ -308,26 +298,18 @@ function WordCloudScreen({
   const qIdx = session.questions.findIndex((q) => q.id === session.current_question_id);
   const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
   const total = words.reduce((sum, w) => sum + w.count, 0);
-  const maxCount = Math.max(1, ...words.map((w) => w.count));
 
-  // Stable shuffle — keyed on word set, not counts
-  const wordSet = words.map((w) => w.word).sort().join(",");
-  const shuffled = useMemo(() => {
-    const arr = [...words];
-    let seed = 0;
-    for (let i = 0; i < wordSet.length; i++) seed = (seed * 31 + wordSet.charCodeAt(i)) & 0xfffffff;
-    return arr.sort((a, b) => {
-      const ha = (seed * 17 + a.word.charCodeAt(0)) & 0xfffffff;
-      const hb = (seed * 17 + b.word.charCodeAt(0)) & 0xfffffff;
-      return ha - hb;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wordSet]);
+  // Mål cloud-containerens bredde responsivt
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [canvasW, setCanvasW] = useState(1100);
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(([e]) => setCanvasW(e.contentRect.width));
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
-  const wordSize = (count: number) => {
-    const min = 32, max = 108;
-    return min + ((count - 1) / Math.max(1, maxCount - 1)) * (max - min);
-  };
+  const cloudH = Math.max(320, Math.min(520, words.length * 28));
 
   return (
     <div className={s.page}>
@@ -348,22 +330,12 @@ function WordCloudScreen({
       <div className={s.body} style={{ alignItems: "flex-start" }}>
         <div className={s.resultsWrap}>
           <h1 className={s.questionText}>{currentQ?.prompt ?? ""}</h1>
-          <div className={s.wordCloud}>
+          <div className={s.wordCloud} ref={containerRef} style={{ minHeight: cloudH }}>
             {words.length === 0 ? (
               <span className={s.idleSub}>Venter på ord…</span>
-            ) : shuffled.map(({ word, count }) => (
-              <span
-                key={word}
-                className={s.cloudWord}
-                style={{
-                  fontSize: wordSize(count),
-                  color: cloudColor(word),
-                  opacity: 0.7 + 0.3 * (count / maxCount),
-                }}
-              >
-                {word}
-              </span>
-            ))}
+            ) : (
+              <WordCloudCanvas words={words} width={canvasW} height={cloudH} />
+            )}
           </div>
           <div className={s.totalLine}>{total} {total === 1 ? "svar" : "svar"}</div>
         </div>
