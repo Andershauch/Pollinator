@@ -3,6 +3,13 @@ import { sql } from "@/lib/db";
 
 type Params = { params: Promise<{ code: string }> };
 
+type QuestionRow = {
+  id: string;
+  is_open: boolean;
+  duration_seconds: number | null;
+  opened_at: string | null;
+};
+
 // GET /api/sessions/[code] — hent session-state inkl. spørgsmål
 export async function GET(_req: NextRequest, { params }: Params) {
   const { code } = await params;
@@ -19,6 +26,18 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   if (rows.length === 0) {
     return NextResponse.json({ error: "session not found" }, { status: 404 });
+  }
+
+  const session = rows[0] as { current_question_id: string | null; questions: QuestionRow[] };
+  const currentQ = session.questions.find((q) => q.id === session.current_question_id);
+
+  // Auto-luk udløbne spørgsmål
+  if (currentQ?.is_open && currentQ.duration_seconds && currentQ.opened_at) {
+    const elapsed = (Date.now() - new Date(currentQ.opened_at).getTime()) / 1000;
+    if (elapsed >= currentQ.duration_seconds) {
+      await sql`UPDATE questions SET is_open = false WHERE id = ${currentQ.id}`;
+      currentQ.is_open = false;
+    }
   }
 
   return NextResponse.json(rows[0]);
@@ -81,15 +100,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   // 2. Auto-styr is_open på spørgsmål når current_question_id ændres
   if (hasCqid) {
-    // Luk alle spørgsmål i sessionen
     await sql`
       UPDATE questions SET is_open = false
       WHERE session_id = ${session.id as string}
     `;
-    // Åbn det nye spørgsmål (hvis ikke null)
     if (body.current_question_id) {
       await sql`
-        UPDATE questions SET is_open = true
+        UPDATE questions SET is_open = true, opened_at = NOW()
         WHERE id = ${body.current_question_id} AND session_id = ${session.id as string}
       `;
     }

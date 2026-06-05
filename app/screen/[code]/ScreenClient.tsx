@@ -16,6 +16,8 @@ type Question = {
   options: string[];
   position: number;
   is_open: boolean;
+  duration_seconds: number | null;
+  opened_at: string | null;
 };
 
 type Session = {
@@ -28,6 +30,46 @@ type Session = {
 };
 
 type TallyItem = { index: number; label: string; votes: number };
+
+/* ── Countdown ──────────────────────────────────────────────── */
+
+function useCountdown(openedAt: string | null, durationSec: number | null) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    if (!openedAt || !durationSec) { setRemaining(null); return; }
+    const end = new Date(openedAt).getTime() + durationSec * 1000;
+    const tick = () => setRemaining(Math.max(0, Math.round((end - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [openedAt, durationSec]);
+  return remaining;
+}
+
+function fmtTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function ScreenTimer({ openedAt, durationSec }: { openedAt: string | null; durationSec: number | null }) {
+  const remaining = useCountdown(openedAt, durationSec);
+  if (remaining === null) return null;
+  const pct = durationSec ? remaining / durationSec : 0;
+  const urgent = remaining <= 30;
+  return (
+    <span style={{
+      fontVariantNumeric: "tabular-nums",
+      fontSize: 14,
+      fontWeight: 600,
+      letterSpacing: "0.18em",
+      color: remaining === 0 ? "oklch(0.72 0.165 330)" : urgent ? "oklch(0.82 0.155 78)" : "oklch(0.79 0.15 158)",
+      opacity: pct === 0 ? 0.5 : 1,
+    }}>
+      {remaining === 0 ? "UDLØBET" : fmtTime(remaining)}
+    </span>
+  );
+}
 
 type Results = {
   question_id: string;
@@ -145,6 +187,7 @@ function ResultsScreen({
   const qIdx = session.questions.findIndex(
     (q) => q.id === session.current_question_id
   );
+  const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
 
   const total = results.total;
   const chartData = results.tally.map((item) => ({
@@ -164,6 +207,12 @@ function ResultsScreen({
               <span>
                 SPØRGSMÅL {qIdx + 1} / {session.questions.length}
               </span>
+            )}
+            {currentQ?.is_open && (
+              <ScreenTimer
+                openedAt={currentQ.opened_at}
+                durationSec={currentQ.duration_seconds}
+              />
             )}
             <LiveTag />
           </>

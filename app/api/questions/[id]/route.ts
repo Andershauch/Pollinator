@@ -17,7 +17,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   const rows = await sql`
     UPDATE questions
-    SET is_open = ${body.is_open}
+    SET is_open   = ${body.is_open},
+        opened_at = CASE WHEN ${body.is_open}::boolean THEN NOW() ELSE opened_at END
     WHERE id = ${id}
     RETURNING *
   `;

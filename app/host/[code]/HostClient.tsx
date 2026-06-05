@@ -11,6 +11,8 @@ type Question = {
   options: string[];
   position: number;
   is_open: boolean;
+  duration_seconds: number | null;
+  opened_at: string | null;
 };
 
 type Session = {
@@ -33,6 +35,49 @@ const OPT_COLORS = [
 
 const DEFAULT_OPTIONS = ["Enig", "Uenig", "Ved ikke"];
 const MAX_OPTIONS = 5;
+
+const DURATION_OPTIONS = [
+  { label: "Ingen timer", value: null },
+  { label: "1 min", value: 60 },
+  { label: "2 min", value: 120 },
+  { label: "3 min", value: 180 },
+  { label: "5 min", value: 300 },
+  { label: "10 min", value: 600 },
+];
+
+/* ── Countdown hook ─────────────────────────────────────────── */
+
+function useCountdown(openedAt: string | null, durationSec: number | null) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!openedAt || !durationSec) { setRemaining(null); return; }
+    const end = new Date(openedAt).getTime() + durationSec * 1000;
+    const tick = () => setRemaining(Math.max(0, Math.round((end - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [openedAt, durationSec]);
+
+  return remaining;
+}
+
+function fmtTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function CountdownBadge({ openedAt, durationSec }: { openedAt: string | null; durationSec: number | null }) {
+  const remaining = useCountdown(openedAt, durationSec);
+  if (remaining === null) return null;
+  const expired = remaining === 0;
+  return (
+    <span className={`${s.badge} ${expired ? s.expired : s.timer}`}>
+      {expired ? "UDLØBET" : `⏱ ${fmtTime(remaining)}`}
+    </span>
+  );
+}
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -59,6 +104,7 @@ export default function HostClient({ code }: { code: string }) {
   // Add-question form state
   const [prompt, setPrompt] = useState("");
   const [options, setOptions] = useState(DEFAULT_OPTIONS);
+  const [durationSec, setDurationSec] = useState<number | null>(null);
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
@@ -156,13 +202,14 @@ export default function HostClient({ code }: { code: string }) {
       const res = await fetch(`/api/sessions/${code}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed, options: validOpts }),
+        body: JSON.stringify({ prompt: trimmed, options: validOpts, duration_seconds: durationSec }),
       });
       const data = await res.json();
       if (!res.ok) { setAddError(data.error ?? "Fejl"); return; }
       setSession((s) => s ? { ...s, questions: [...s.questions, data] } : s);
       setPrompt("");
       setOptions(DEFAULT_OPTIONS);
+      setDurationSec(null);
     } catch {
       setAddError("Netværksfejl");
     } finally {
@@ -268,6 +315,9 @@ export default function HostClient({ code }: { code: string }) {
                           ? <span className={`${s.badge} ${s.open}`}>ÅBEN FOR SVAR</span>
                           : <span className={`${s.badge} ${s.shut}`}>LUKKET</span>
                         }
+                        {q.is_open && (
+                          <CountdownBadge openedAt={q.opened_at} durationSec={q.duration_seconds} />
+                        )}
                       </div>
                     )}
                   </div>
@@ -398,6 +448,22 @@ export default function HostClient({ code }: { code: string }) {
                     )}
                   </div>
                 ))}
+              </div>
+
+              <div>
+                <label className={s.label}>Varighed</label>
+                <select
+                  value={durationSec ?? ""}
+                  onChange={(e) => setDurationSec(e.target.value ? Number(e.target.value) : null)}
+                  className={s.input}
+                  style={{ resize: "none", cursor: "pointer" }}
+                >
+                  {DURATION_OPTIONS.map((opt) => (
+                    <option key={opt.value ?? "none"} value={opt.value ?? ""}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {addError && <div className={s.error}>{addError}</div>}

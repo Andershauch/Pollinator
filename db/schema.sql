@@ -11,12 +11,14 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 -- Dilemma question belonging to a session
 CREATE TABLE IF NOT EXISTS questions (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id  uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  prompt      text NOT NULL,
-  options     jsonb NOT NULL DEFAULT '[]',
-  position    int  NOT NULL DEFAULT 0,
-  is_open     boolean NOT NULL DEFAULT false
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id       uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  prompt           text NOT NULL,
+  options          jsonb NOT NULL DEFAULT '[]',
+  position         int  NOT NULL DEFAULT 0,
+  is_open          boolean NOT NULL DEFAULT false,
+  duration_seconds int  DEFAULT NULL,
+  opened_at        timestamptz DEFAULT NULL
 );
 
 -- Participant response (one per participant per question)
@@ -35,3 +37,7 @@ ALTER TABLE sessions
   FOREIGN KEY (current_question_id) REFERENCES questions(id)
   ON DELETE SET NULL
   NOT VALID;
+
+-- Idempotent: add timer columns to existing databases
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS duration_seconds int DEFAULT NULL;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS opened_at timestamptz DEFAULT NULL;

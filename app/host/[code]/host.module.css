@@ -240,9 +240,11 @@
   border: 1px solid transparent;
 }
 
-.badge.open   { color: var(--c2); border-color: var(--c2); background: color-mix(in oklch, var(--c2) 12%, transparent); }
-.badge.shut   { color: var(--c3); border-color: var(--c3); background: color-mix(in oklch, var(--c3) 12%, transparent); }
-.badge.queued { color: var(--faint); border-color: var(--line); }
+.badge.open    { color: var(--c2); border-color: var(--c2); background: color-mix(in oklch, var(--c2) 12%, transparent); }
+.badge.shut    { color: var(--c3); border-color: var(--c3); background: color-mix(in oklch, var(--c3) 12%, transparent); }
+.badge.queued  { color: var(--faint); border-color: var(--line); }
+.badge.timer   { color: var(--c1); border-color: var(--c1); background: color-mix(in oklch, var(--c1) 12%, transparent); font-variant-numeric: tabular-nums; }
+.badge.expired { color: var(--c4); border-color: var(--c4); background: color-mix(in oklch, var(--c4) 12%, transparent); }
 
 .qActions {
   display: flex;

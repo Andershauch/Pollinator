@@ -6,7 +6,7 @@ type Params = { params: Promise<{ code: string }> };
 // POST /api/sessions/[code]/questions — tilføj spørgsmål
 export async function POST(req: NextRequest, { params }: Params) {
   const { code } = await params;
-  const { prompt, options, position } = await req.json();
+  const { prompt, options, position, duration_seconds } = await req.json();
 
   if (!prompt?.trim() || !Array.isArray(options) || options.length === 0) {
     return NextResponse.json(
@@ -32,9 +32,13 @@ export async function POST(req: NextRequest, { params }: Params) {
           WHERE session_id = ${sessions[0].id as string}
         `) as Array<{ next: number }>)[0].next;
 
+  const dur = typeof duration_seconds === "number" && duration_seconds > 0
+    ? duration_seconds
+    : null;
+
   const rows = await sql`
-    INSERT INTO questions (session_id, prompt, options, position)
-    VALUES (${sessions[0].id as string}, ${prompt.trim()}, ${JSON.stringify(options)}, ${pos})
+    INSERT INTO questions (session_id, prompt, options, position, duration_seconds)
+    VALUES (${sessions[0].id as string}, ${prompt.trim()}, ${JSON.stringify(options)}, ${pos}, ${dur})
     RETURNING *
   `;
 

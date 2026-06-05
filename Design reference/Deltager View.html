@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deltager View — Mobil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* identical tokens to the big screen */
+    --bg:    #111319;
+    --bg-2:  #161922;
+    --panel: #1b1f29;
+    --line:  rgba(255,255,255,.085);
+    --line-2:rgba(255,255,255,.16);
+    --fg:    #f3f4f7;
+    --muted: #9298a8;
+    --faint: #5b616f;
+    --c1: oklch(0.82 0.155 78);   /* amber  */
+    --c2: oklch(0.79 0.150 158);  /* green  */
+    --c3: oklch(0.73 0.150 248);  /* blue   */
+    --c4: oklch(0.72 0.165 330);  /* magenta*/
+    --accent: var(--c1);
+    --font: "Bahnschrift", "Oswald", "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { min-height:100%; }
+  body {
+    background:#d7d8dc;
+    color:#23252b;
+    font-family:var(--font);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Gallery (presentation surface) ---------- */
+  .gallery { min-height:100vh; padding:56px 40px 72px; }
+  .gh { max-width:1120px; margin:0 auto 52px; }
+  .gh-kicker {
+    font-size:14px; font-weight:600; letter-spacing:.32em; text-transform:uppercase;
+    color:#7a7d86; margin-bottom:14px;
+  }
+  .gh-title {
+    font-size:44px; font-weight:600; letter-spacing:.01em; color:#1c1e24; line-height:1;
+  }
+  .gh-sub {
+    margin-top:18px; max-width:720px; font-size:18px; font-weight:300; line-height:1.5;
+    color:#565962;
+  }
+  .frames {
+    display:flex; flex-wrap:wrap; gap:34px;
+    justify-content:center; align-items:flex-start;
+  }
+  .frame-col { display:flex; flex-direction:column; align-items:center; gap:20px; }
+  .frame-label {
+    font-size:13px; font-weight:600; letter-spacing:.2em; text-transform:uppercase;
+    color:#54575f;
+  }
+
+  /* ============================================================
+     Mobile screen — dark, shares the big-screen vocabulary
+     ============================================================ */
+  .pscreen {
+    height:100%; box-sizing:border-box;
+    background:var(--bg);
+    color:var(--fg);
+    display:flex; flex-direction:column;
+    padding:62px 24px 40px;
+    animation:pfade .4s ease both;
+  }
+  @keyframes pfade { from { opacity:0; } to { opacity:1; } }
+
+  /* top bar */
+  .ptop {
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:4px;
+  }
+  .pbrand { display:flex; align-items:center; gap:9px; }
+  .pbrand-dot {
+    width:11px; height:11px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 0 4px color-mix(in oklch, var(--accent) 20%, transparent);
+  }
+  .pbrand-name { font-size:14px; font-weight:600; letter-spacing:.26em; color:var(--fg); }
+  .ptag { font-size:13px; font-weight:500; letter-spacing:.16em; color:var(--muted); }
+  .ptag.muted { color:var(--faint); }
+  .status-ok {
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:500; letter-spacing:.16em; color:var(--c2);
+  }
+  .status-dot {
+    width:9px; height:9px; border-radius:50%; background:var(--c2);
+    box-shadow:0 0 10px color-mix(in oklch, var(--c2) 70%, transparent);
+  }
+
+  /* centered main + footer */
+  .pmain.center {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:22px; text-align:center;
+  }
+  .pfoot { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:18px; padding-top:16px; }
+
+  /* confirmation check */
+  .check-ring {
+    width:104px; height:104px; border-radius:50%;
+    background:color-mix(in oklch, var(--c2) 14%, transparent);
+    border:2px solid color-mix(in oklch, var(--c2) 55%, transparent);
+    display:flex; align-items:center; justify-content:center;
+    animation:pop .45s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  .check-ring.sm { width:84px; height:84px; }
+  .check {
+    width:26px; height:48px; margin-top:-10px;
+    border:solid var(--c2); border-width:0 7px 7px 0;
+    transform:rotate(45deg);
+  }
+  .check-ring.sm .check { width:21px; height:38px; border-width:0 6px 6px 0; }
+  @keyframes pop { from { transform:scale(.6); opacity:0; } to { transform:scale(1); opacity:1; } }
+
+  .big-confirm { font-size:42px; font-weight:600; letter-spacing:.02em; }
+  .big-confirm.dim { color:var(--muted); }
+  .ws-sub {
+    font-size:16px; font-weight:400; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  /* paused / closed icon */
+  .pause-ring {
+    width:104px; height:104px; border-radius:50%;
+    border:2px solid var(--line-2);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pause { display:flex; gap:11px; }
+  .pause i { width:10px; height:36px; border-radius:4px; background:var(--faint); }
+
+  /* waiting indicator */
+  .waiting { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .waiting-text { font-size:15px; font-weight:300; letter-spacing:.06em; color:var(--faint); }
+  .dots { display:flex; gap:11px; }
+  .dots i { width:10px; height:10px; border-radius:50%; background:var(--muted); animation:dotp 1.4s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay:.18s; }
+  .dots i:nth-child(3) { animation-delay:.36s; }
+  @keyframes dotp {
+    0%, 65%, 100% { opacity:.25; transform:translateY(0); }
+    32% { opacity:1; transform:translateY(-6px); }
+  }
+
+  /* question */
+  .q-head { flex:0 0 auto; padding:26px 2px 6px; }
+  .pq { font-size:27px; font-weight:500; line-height:1.22; letter-spacing:.005em; text-wrap:balance; }
+
+  /* answer buttons — big, tappable */
+  .popts { flex:1; display:flex; flex-direction:column; gap:14px; padding:14px 0 6px; }
+  .popt {
+    flex:1 1 0; min-height:64px;
+    display:flex; align-items:center; gap:18px;
+    width:100%; padding:16px 18px; text-align:left;
+    background:var(--panel);
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    color:var(--fg); font-family:var(--font); cursor:pointer;
+    transition:transform .12s ease, border-color .15s ease, background .15s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .popt:hover { border-color:var(--line-2); }
+  .popt:active { transform:scale(.975); background:var(--bg-2); }
+  .popt-num {
+    flex:0 0 auto; width:50px; height:50px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; font-weight:600; color:#15171d;
+  }
+  .popt-label { font-size:22px; font-weight:500; letter-spacing:.01em; }
+
+  /* chosen chip (state 3) */
+  .submitted-label { font-size:19px; font-weight:500; letter-spacing:.3em; color:var(--muted); }
+  .chosen {
+    display:flex; align-items:center; gap:18px; width:100%;
+    padding:20px; border-radius:16px;
+    background:var(--panel); border:1.5px solid var(--line-2);
+  }
+  .chosen-label { font-size:25px; font-weight:600; letter-spacing:.01em; }
+
+  .reset {
+    background:transparent; border:1px solid var(--line);
+    color:var(--muted); font-family:var(--font);
+    font-size:14px; letter-spacing:.12em; padding:11px 20px; border-radius:999px;
+    cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  .reset:hover { border-color:var(--line-2); color:var(--fg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, .pscreen, .check-ring, .dots i { animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="participant.jsx"></script>
+</body>
+</html>
