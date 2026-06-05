@@ -24,7 +24,7 @@ function cloudColor(word: string) {
 }
 
 function getRotation(word: string): number {
-  return wordHash(word) % 4 === 0 ? -90 : 0;
+  return wordHash(word) % 7 === 0 ? -90 : 0;
 }
 
 function makeRandom(seed: number) {
