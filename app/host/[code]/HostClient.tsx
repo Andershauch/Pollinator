@@ -269,6 +269,9 @@ export default function HostClient({ code }: { code: string }) {
           <a href={`/screen/${code}`} target="_blank" rel="noopener" className={s.linkBtn}>
             Storskærm ↗
           </a>
+          <a href={`/report/${code}`} target="_blank" rel="noopener" className={s.linkBtn}>
+            Rapport ↗
+          </a>
         </div>
       </header>
 

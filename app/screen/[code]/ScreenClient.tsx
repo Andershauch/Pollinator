@@ -467,17 +467,35 @@ export default function ScreenClient({ code }: { code: string }) {
   const joinUrl = `${origin}/s/${code}`;
 
   const activeQ = session.questions.find((q) => q.id === session.current_question_id);
+  const showQR = !!session.current_question_id && !!origin;
 
-  // Ordsky
+  let screenContent: React.ReactNode;
   if (session.current_question_id && activeQ?.type === "wordcloud" && words !== null) {
-    return <WordCloudScreen session={session} words={words} />;
+    screenContent = <WordCloudScreen session={session} words={words} />;
+  } else if (session.current_question_id && activeQ?.type !== "wordcloud" && results) {
+    screenContent = <ResultsScreen session={session} results={results} />;
+  } else {
+    screenContent = <LobbyScreen session={session} joinUrl={joinUrl} />;
   }
 
-  // Dilemma-resultater
-  if (session.current_question_id && activeQ?.type !== "wordcloud" && results) {
-    return <ResultsScreen session={session} results={results} />;
-  }
-
-  // Lobby — eller vent på første resultater
-  return <LobbyScreen session={session} joinUrl={joinUrl} />;
+  return (
+    <>
+      {screenContent}
+      {showQR && (
+        <div className={s.persistentQR}>
+          <div className={s.persistentQRCard}>
+            <QRCodeSVG
+              value={joinUrl}
+              size={76}
+              bgColor="white"
+              fgColor="#111319"
+              level="M"
+              marginSize={1}
+            />
+          </div>
+          <span className={s.persistentQRLabel}>{code}</span>
+        </div>
+      )}
+    </>
+  );
 }

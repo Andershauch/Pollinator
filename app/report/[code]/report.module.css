@@ -1,0 +1,290 @@
+/* ============================================================
+   Rapport-side — printvenlig, dark theme
+   ============================================================ */
+
+.page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 36px 48px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.brandDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 20%, transparent);
+}
+
+.brandName {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--muted);
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  margin: 0;
+}
+
+.meta {
+  font-size: 14px;
+  color: var(--faint);
+  letter-spacing: 0.06em;
+}
+
+.meta strong { color: var(--muted); }
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.btnPrint, .btnCsv {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.btnPrint {
+  background: var(--panel);
+  border-color: var(--line-2);
+  color: var(--muted);
+}
+
+.btnPrint:hover { color: var(--fg); border-color: var(--line-2); }
+
+.btnCsv {
+  background: var(--c2);
+  color: #0d1a0f;
+}
+
+.btnCsv:hover { opacity: 0.88; }
+
+/* ── Main content ────────────────────────────────────────── */
+
+.main {
+  padding: 40px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 900px;
+}
+
+/* ── Question card ───────────────────────────────────────── */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.qNum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--faint);
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.qTypeBadge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  color: var(--faint);
+  flex-shrink: 0;
+}
+
+.qPrompt {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--fg);
+  margin: 0;
+}
+
+.cardBody {
+  padding: 20px 24px;
+}
+
+/* ── Dilemma bars ────────────────────────────────────────── */
+
+.tallyList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tallyRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tallyLabel {
+  width: 180px;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: right;
+}
+
+.barTrack {
+  flex: 1;
+  height: 24px;
+  background: var(--bg-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.tallyStat {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.tallyPct {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.tallyVotes {
+  font-size: 13px;
+  color: var(--faint);
+}
+
+/* ── Word list ───────────────────────────────────────────── */
+
+.wordList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wordRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wordText {
+  width: 180px;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--fg);
+  text-align: right;
+  transition: font-size 0.3s ease;
+}
+
+.wordBarTrack {
+  flex: 1;
+  height: 18px;
+  background: var(--bg-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.wordBarFill {
+  height: 100%;
+  background: var(--c1);
+  border-radius: 3px;
+}
+
+.wordCount {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Misc ────────────────────────────────────────────────── */
+
+.totalNote {
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: 0.08em;
+  margin-top: 8px;
+  text-align: right;
+}
+
+.noData {
+  font-size: 14px;
+  color: var(--faint);
+  letter-spacing: 0.06em;
+}
+
+/* ── Print ───────────────────────────────────────────────── */
+
+@media print {
+  .actions { display: none; }
+  .page { background: white; color: #111; }
+  .card { border-color: #ddd; background: #f9f9f9; }
+  .cardHead { border-color: #ddd; }
+  .barTrack, .wordBarTrack { background: #e5e5e5; }
+  .brandDot { background: #f59e0b; box-shadow: none; }
+  .meta, .totalNote, .noData { color: #666; }
+  .qPrompt, .tallyPct { color: #111; }
+  .tallyLabel, .wordText, .wordCount, .tallyVotes { color: #444; }
+}
