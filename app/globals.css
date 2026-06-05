@@ -1,0 +1,27 @@
+:root {
+  --bg:     #111319;
+  --bg-2:   #161922;
+  --panel:  #1b1f29;
+  --line:   rgba(255, 255, 255, 0.085);
+  --line-2: rgba(255, 255, 255, 0.16);
+  --fg:     #f3f4f7;
+  --muted:  #9298a8;
+  --faint:  #5b616f;
+  --c1: oklch(0.82 0.155 78);
+  --c2: oklch(0.79 0.15 158);
+  --c3: oklch(0.73 0.15 248);
+  --c4: oklch(0.72 0.165 330);
+  --accent: var(--c1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

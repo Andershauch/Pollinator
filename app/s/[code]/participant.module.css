@@ -1,0 +1,327 @@
+/* ============================================================
+   Design tokens consumed from globals.css (:root)
+   Font stack: Bahnschrift (Windows) → Oswald (Google) → system
+   ============================================================ */
+
+.screen {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  padding: 62px 24px 40px;
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  animation: fade 0.35s ease both;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.brandDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 20%, transparent);
+}
+
+.brandName {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  color: var(--fg);
+}
+
+.tag {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.tagMuted { color: var(--faint); }
+
+.statusOk {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--c2);
+}
+
+.statusDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c2);
+  box-shadow: 0 0 10px color-mix(in oklch, var(--c2) 70%, transparent);
+}
+
+/* ── Layout regions ──────────────────────────────────────── */
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.center {
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  text-align: center;
+}
+
+.foot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding-top: 16px;
+}
+
+/* ── Check ring (lobby + submitted) ──────────────────────── */
+
+.checkRing {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--c2) 14%, transparent);
+  border: 2px solid color-mix(in oklch, var(--c2) 55%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.checkRing.sm {
+  width: 84px;
+  height: 84px;
+}
+
+.check {
+  width: 26px;
+  height: 48px;
+  margin-top: -10px;
+  border: solid var(--c2);
+  border-width: 0 7px 7px 0;
+  transform: rotate(45deg);
+}
+
+.checkRing.sm .check {
+  width: 21px;
+  height: 38px;
+  border-width: 0 6px 6px 0;
+}
+
+@keyframes pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* ── Text atoms ──────────────────────────────────────────── */
+
+.bigLabel {
+  font-size: 42px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.bigLabel.dim { color: var(--muted); }
+
+.subLabel {
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Pause / closed icon ─────────────────────────────────── */
+
+.pauseRing {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 2px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pauseBars {
+  display: flex;
+  gap: 11px;
+}
+
+.pauseBars i {
+  width: 10px;
+  height: 36px;
+  border-radius: 4px;
+  background: var(--faint);
+  font-style: normal;
+}
+
+/* ── Waiting animation ───────────────────────────────────── */
+
+.waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.waitingText {
+  font-size: 15px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.dots {
+  display: flex;
+  gap: 11px;
+}
+
+.dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: dotp 1.4s ease-in-out infinite;
+  font-style: normal;
+}
+
+.dots i:nth-child(2) { animation-delay: 0.18s; }
+.dots i:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes dotp {
+  0%, 65%, 100% { opacity: 0.25; transform: translateY(0); }
+  32%            { opacity: 1;    transform: translateY(-6px); }
+}
+
+/* ── Active question ─────────────────────────────────────── */
+
+.qHead {
+  flex: 0 0 auto;
+  padding: 26px 2px 6px;
+}
+
+.qText {
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1.22;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+
+.opts {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 0 6px;
+}
+
+.opt {
+  flex: 1 1 0;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 16px 18px;
+  text-align: left;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  color: var(--fg);
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.opt:hover  { border-color: var(--line-2); }
+.opt:active { transform: scale(0.975); background: var(--bg-2); }
+
+.opt:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.optNum {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: #15171d;
+}
+
+.optLabel {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* ── Submitted state ─────────────────────────────────────── */
+
+.submittedLabel {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: var(--muted);
+}
+
+.chosen {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1.5px solid var(--line-2);
+}
+
+.chosenLabel {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .screen, .checkRing, .dots i {
+    animation: none !important;
+    transition: none !important;
+  }
+}

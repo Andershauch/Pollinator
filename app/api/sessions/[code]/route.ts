@@ -33,14 +33,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const hasState = "state" in body;
 
   if (!hasCqid && !hasState) {
-    return NextResponse.json({ error: "provide state and/or current_question_id" }, { status: 400 });
+    return NextResponse.json(
+      { error: "provide state and/or current_question_id" },
+      { status: 400 }
+    );
   }
 
   const VALID_STATES = ["lobby", "active", "closed"];
   if (hasState && !VALID_STATES.includes(body.state)) {
-    return NextResponse.json({ error: `state must be one of: ${VALID_STATES.join(", ")}` }, { status: 400 });
+    return NextResponse.json(
+      { error: `state must be one of: ${VALID_STATES.join(", ")}` },
+      { status: 400 }
+    );
   }
 
+  // 1. Opdater sessions-rækken
   let rows;
   if (hasCqid && hasState) {
     rows = await sql`
@@ -70,5 +77,23 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
 
-  return NextResponse.json(rows[0]);
+  const session = rows[0];
+
+  // 2. Auto-styr is_open på spørgsmål når current_question_id ændres
+  if (hasCqid) {
+    // Luk alle spørgsmål i sessionen
+    await sql`
+      UPDATE questions SET is_open = false
+      WHERE session_id = ${session.id as string}
+    `;
+    // Åbn det nye spørgsmål (hvis ikke null)
+    if (body.current_question_id) {
+      await sql`
+        UPDATE questions SET is_open = true
+        WHERE id = ${body.current_question_id} AND session_id = ${session.id as string}
+      `;
+    }
+  }
+
+  return NextResponse.json(session);
 }
