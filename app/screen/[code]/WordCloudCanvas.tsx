@@ -122,6 +122,10 @@ export default function WordCloudCanvas({
     const isFirstRender = prevNames.size === 0;
 
     async function layout() {
+      // d3-cloud measures text via canvas — wait for fonts so metrics are correct
+      try { await document.fonts.ready; } catch (_) {}
+      if (cancelled) return;
+
       // Retry with smaller sizes until all words fit (up to 7 attempts, scale × 0.8 each time)
       let scale = 1.0;
       let placed: LayoutWord[] = [];
@@ -209,6 +213,6 @@ export default function WordCloudCanvas({
   }, [words, width, height]);
 
   return (
-    <svg ref={svgRef} width={width} height={height} style={{ overflow: "visible" }} />
+    <svg ref={svgRef} width={width} height={height} style={{ overflow: "hidden" }} />
   );
 }
