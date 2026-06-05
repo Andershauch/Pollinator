@@ -23,7 +23,6 @@ function cloudColor(word: string) {
   return COLORS[wordHash(word) % COLORS.length];
 }
 
-// ~25% of words rotate −90°, stable per word text
 function getRotation(word: string): number {
   return wordHash(word) % 4 === 0 ? -90 : 0;
 }
@@ -45,7 +44,28 @@ function calcSize(count: number, maxCount: number): number {
   return Math.round(22 + ratio * (112 - 22));
 }
 
-// Subtle float — reduced amplitudes
+// Run one d3-cloud layout pass, returns placed words
+function runLayout(
+  candidates: LayoutWord[],
+  width: number,
+  height: number,
+  seed: number,
+  padding: number
+): Promise<LayoutWord[]> {
+  return new Promise((resolve) => {
+    cloud<LayoutWord>()
+      .size([width, height])
+      .words(candidates)
+      .padding(padding)
+      .rotate((d) => getRotation((d as LayoutWord).text ?? ""))
+      .font("Bahnschrift, Oswald, sans-serif")
+      .fontSize((d) => d.size)
+      .random(makeRandom(seed))
+      .on("end", resolve)
+      .start();
+  });
+}
+
 const SVG_STYLE = `
   @keyframes wIn {
     from { opacity: 0; transform: scale(0.15); }
@@ -58,6 +78,7 @@ const SVG_STYLE = `
 `;
 
 const FLOAT_DURATIONS = [3.4, 3.9, 4.2, 2.9];
+const MIN_FONT = 11; // px — smallest readable size
 
 export default function WordCloudCanvas({
   words,
@@ -76,6 +97,7 @@ export default function WordCloudCanvas({
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg || words.length === 0) return;
+    let cancelled = false;
 
     const maxCount = Math.max(1, ...words.map((w) => w.count));
     const currentNames = new Set(words.map((w) => w.word));
@@ -87,7 +109,7 @@ export default function WordCloudCanvas({
       currentNames.size === prevNames.size &&
       words.every((w) => prevNames.has(w.word));
 
-    // Count-only update: animate font-size in-place, float animations keep running
+    // Count-only update: animate font-size in-place so float animations keep running
     if (sameWords) {
       words.forEach((w) => {
         const el = textMapRef.current.get(w.word);
@@ -99,77 +121,91 @@ export default function WordCloudCanvas({
     const seed = getSeed(words);
     const isFirstRender = prevNames.size === 0;
 
-    cloud<LayoutWord>()
-      .size([width, height])
-      .words(
-        words.map(({ word, count }) => ({
+    async function layout() {
+      // Retry with smaller sizes until all words fit (up to 7 attempts, scale × 0.8 each time)
+      let scale = 1.0;
+      let placed: LayoutWord[] = [];
+
+      for (let attempt = 0; attempt < 7; attempt++) {
+        if (cancelled) return;
+
+        const candidates = words.map(({ word, count }) => ({
           text: word,
           count,
-          size: calcSize(count, maxCount),
-        }))
-      )
-      .padding(10)
-      .rotate((d) => getRotation((d as LayoutWord).text ?? ""))
-      .font("Bahnschrift, Oswald, sans-serif")
-      .fontSize((d) => d.size)
-      .random(makeRandom(seed))
-      .on("end", (placed) => {
-        while (svg.firstChild) svg.removeChild(svg.firstChild);
-        textMapRef.current.clear();
+          size: Math.max(MIN_FONT, Math.round(calcSize(count, maxCount) * scale)),
+        })) as LayoutWord[];
 
-        const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
-        styleEl.textContent = SVG_STYLE;
-        svg.appendChild(styleEl);
+        placed = await runLayout(
+          candidates,
+          width,
+          height,
+          seed,
+          Math.max(2, Math.round(10 * scale))
+        );
 
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.setAttribute("transform", `translate(${width / 2},${height / 2})`);
+        if (placed.length >= words.length) break;
+        scale *= 0.8;
+      }
 
-        placed.forEach((w, i) => {
-          const wordStr = w.text ?? "";
-          const isNew = !prevNames.has(wordStr);
-          const fi = i % 4;
-          const dur = FLOAT_DURATIONS[fi];
-          // golden-angle spread so neighbouring words are out of phase
-          const floatDelay = ((i * 137) % 3000) / 1000;
+      if (cancelled) return;
 
-          const wg = document.createElementNS("http://www.w3.org/2000/svg", "g");
-          wg.setAttribute(
-            "transform",
-            `translate(${w.x ?? 0},${w.y ?? 0})rotate(${w.rotate ?? 0})`
-          );
+      // Render
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      textMapRef.current.clear();
 
-          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          text.setAttribute("text-anchor", "middle");
-          text.setAttribute("font-family", "Bahnschrift, Oswald, sans-serif");
-          text.setAttribute("font-weight", "bold");
-          text.setAttribute("fill", cloudColor(wordStr));
-          // font-size via style so CSS transition works
-          text.style.fontSize = `${w.size}px`;
-          text.style.transition = "font-size 0.55s ease-out";
-          text.style.transformBox = "fill-box";
-          text.style.transformOrigin = "center center";
+      const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+      styleEl.textContent = SVG_STYLE;
+      svg.appendChild(styleEl);
 
-          if (isNew) {
-            const entryDelay = isFirstRender ? i * 0.06 : 0;
-            const floatStart = entryDelay + 0.45 + floatDelay * 0.25;
-            text.style.animation =
-              `wIn 0.45s ease-out ${entryDelay}s both, ` +
-              `wFloat${fi} ${dur}s ease-in-out ${floatStart}s infinite`;
-          } else {
-            text.style.animation = `wFloat${fi} ${dur}s ease-in-out ${floatDelay}s infinite`;
-          }
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("transform", `translate(${width / 2},${height / 2})`);
 
-          text.textContent = wordStr;
-          textMapRef.current.set(wordStr, text as SVGTextElement);
-          wg.appendChild(text);
-          g.appendChild(wg);
-        });
+      placed.forEach((w, i) => {
+        const wordStr = w.text ?? "";
+        const isNew = !prevNames.has(wordStr);
+        const fi = i % 4;
+        const dur = FLOAT_DURATIONS[fi];
+        const floatDelay = ((i * 137) % 3000) / 1000;
 
-        svg.appendChild(g);
-        prevNamesRef.current = currentNames;
-        prevSizeRef.current = { w: width, h: height };
-      })
-      .start();
+        const wg = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        wg.setAttribute(
+          "transform",
+          `translate(${w.x ?? 0},${w.y ?? 0})rotate(${w.rotate ?? 0})`
+        );
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("font-family", "Bahnschrift, Oswald, sans-serif");
+        text.setAttribute("font-weight", "bold");
+        text.setAttribute("fill", cloudColor(wordStr));
+        text.style.fontSize = `${w.size}px`;
+        text.style.transition = "font-size 0.55s ease-out";
+        text.style.transformBox = "fill-box";
+        text.style.transformOrigin = "center center";
+
+        if (isNew) {
+          const entryDelay = isFirstRender ? i * 0.06 : 0;
+          const floatStart = entryDelay + 0.45 + floatDelay * 0.25;
+          text.style.animation =
+            `wIn 0.45s ease-out ${entryDelay}s both, ` +
+            `wFloat${fi} ${dur}s ease-in-out ${floatStart}s infinite`;
+        } else {
+          text.style.animation = `wFloat${fi} ${dur}s ease-in-out ${floatDelay}s infinite`;
+        }
+
+        text.textContent = wordStr;
+        textMapRef.current.set(wordStr, text as SVGTextElement);
+        wg.appendChild(text);
+        g.appendChild(wg);
+      });
+
+      svg.appendChild(g);
+      prevNamesRef.current = currentNames;
+      prevSizeRef.current = { w: width, h: height };
+    }
+
+    layout();
+    return () => { cancelled = true; };
   }, [words, width, height]);
 
   return (
