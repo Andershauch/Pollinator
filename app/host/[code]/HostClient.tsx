@@ -13,6 +13,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
+  type: "dilemma" | "wordcloud";
 };
 
 type Session = {
@@ -102,6 +103,7 @@ export default function HostClient({ code }: { code: string }) {
   const [error, setError] = useState("");
 
   // Add-question form state
+  const [qType, setQType] = useState<"dilemma" | "wordcloud">("dilemma");
   const [prompt, setPrompt] = useState("");
   const [options, setOptions] = useState(DEFAULT_OPTIONS);
   const [durationSec, setDurationSec] = useState<number | null>(null);
@@ -202,7 +204,7 @@ export default function HostClient({ code }: { code: string }) {
       const res = await fetch(`/api/sessions/${code}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed, options: validOpts, duration_seconds: durationSec }),
+        body: JSON.stringify({ prompt: trimmed, options: validOpts, duration_seconds: durationSec, type: qType }),
       });
       const data = await res.json();
       if (!res.ok) { setAddError(data.error ?? "Fejl"); return; }
@@ -210,6 +212,7 @@ export default function HostClient({ code }: { code: string }) {
       setPrompt("");
       setOptions(DEFAULT_OPTIONS);
       setDurationSec(null);
+      setQType("dilemma");
     } catch {
       setAddError("Netværksfejl");
     } finally {
@@ -307,7 +310,9 @@ export default function HostClient({ code }: { code: string }) {
                   <div className={s.qBody}>
                     <div className={s.qPrompt}>{q.prompt}</div>
                     <div className={s.qOptions}>
-                      {q.options.join(" · ")}
+                      {q.type === "wordcloud"
+                        ? <span className={`${s.badge} ${s.shut}`} style={{ fontSize: 10 }}>ORDSKY</span>
+                        : q.options.join(" · ")}
                     </div>
                     {isCurrent && (
                       <div className={s.qStatus}>
@@ -416,6 +421,23 @@ export default function HostClient({ code }: { code: string }) {
             <div className={s.commandTitle}>Tilføj spørgsmål</div>
 
             <div className={s.formBlock}>
+
+              <div>
+                <label className={s.label}>Type</label>
+                <div className={s.stateRow}>
+                  {(["dilemma", "wordcloud"] as const).map((t) => (
+                    <button
+                      key={t}
+                      className={`${s.stateBtn}${qType === t ? ` ${s.on}` : ""}`}
+                      onClick={() => setQType(t)}
+                      type="button"
+                    >
+                      {t === "dilemma" ? "Dilemma" : "Ordsky"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className={s.label}>Prompt</label>
                 <textarea
@@ -427,28 +449,30 @@ export default function HostClient({ code }: { code: string }) {
                 />
               </div>
 
-              <div>
-                <label className={s.label}>Svarforslag</label>
-                {options.map((opt, i) => (
-                  <div key={i} className={s.optionRow} style={{ marginBottom: 8 }}>
-                    <span
-                      className={s.optionDot}
-                      style={{ background: OPT_COLORS[i % OPT_COLORS.length] }}
-                    />
-                    <input
-                      value={opt}
-                      onChange={(e) => setOpt(i, e.target.value)}
-                      placeholder={`Option ${i + 1}`}
-                      className={s.optInput}
-                    />
-                    {options.length > 2 && (
-                      <button className={s.optRemove} onClick={() => removeOpt(i)} tabIndex={-1}>
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {qType === "dilemma" && (
+                <div>
+                  <label className={s.label}>Svarforslag</label>
+                  {options.map((opt, i) => (
+                    <div key={i} className={s.optionRow} style={{ marginBottom: 8 }}>
+                      <span
+                        className={s.optionDot}
+                        style={{ background: OPT_COLORS[i % OPT_COLORS.length] }}
+                      />
+                      <input
+                        value={opt}
+                        onChange={(e) => setOpt(i, e.target.value)}
+                        placeholder={`Option ${i + 1}`}
+                        className={s.optInput}
+                      />
+                      {options.length > 2 && (
+                        <button className={s.optRemove} onClick={() => removeOpt(i)} tabIndex={-1}>
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div>
                 <label className={s.label}>Varighed</label>
@@ -469,7 +493,7 @@ export default function HostClient({ code }: { code: string }) {
               {addError && <div className={s.error}>{addError}</div>}
 
               <div className={s.formFooter}>
-                {options.length < MAX_OPTIONS && (
+                {qType === "dilemma" && options.length < MAX_OPTIONS && (
                   <button className={s.addOptBtn} onClick={addOpt}>
                     + Tilføj option
                   </button>

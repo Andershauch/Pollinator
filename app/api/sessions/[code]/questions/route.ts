@@ -6,11 +6,17 @@ type Params = { params: Promise<{ code: string }> };
 // POST /api/sessions/[code]/questions — tilføj spørgsmål
 export async function POST(req: NextRequest, { params }: Params) {
   const { code } = await params;
-  const { prompt, options, position, duration_seconds } = await req.json();
+  const { prompt, options, position, duration_seconds, type } = await req.json();
 
-  if (!prompt?.trim() || !Array.isArray(options) || options.length === 0) {
+  const qtype = type === "wordcloud" ? "wordcloud" : "dilemma";
+  const needsOptions = qtype === "dilemma";
+
+  if (!prompt?.trim()) {
+    return NextResponse.json({ error: "prompt required" }, { status: 400 });
+  }
+  if (needsOptions && (!Array.isArray(options) || options.length === 0)) {
     return NextResponse.json(
-      { error: "prompt (string) and options (non-empty array) required" },
+      { error: "options (non-empty array) required for dilemma questions" },
       { status: 400 }
     );
   }
@@ -36,9 +42,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     ? duration_seconds
     : null;
 
+  const safeOptions = needsOptions ? options : [];
+
   const rows = await sql`
-    INSERT INTO questions (session_id, prompt, options, position, duration_seconds)
-    VALUES (${sessions[0].id as string}, ${prompt.trim()}, ${JSON.stringify(options)}, ${pos}, ${dur})
+    INSERT INTO questions (session_id, prompt, options, position, duration_seconds, type)
+    VALUES (${sessions[0].id as string}, ${prompt.trim()}, ${JSON.stringify(safeOptions)}, ${pos}, ${dur}, ${qtype})
     RETURNING *
   `;
 

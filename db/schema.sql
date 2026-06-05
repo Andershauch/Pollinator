@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS questions (
   position         int  NOT NULL DEFAULT 0,
   is_open          boolean NOT NULL DEFAULT false,
   duration_seconds int  DEFAULT NULL,
-  opened_at        timestamptz DEFAULT NULL
+  opened_at        timestamptz DEFAULT NULL,
+  type             text NOT NULL DEFAULT 'dilemma'
 );
 
 -- Participant response (one per participant per question)
@@ -38,6 +39,17 @@ ALTER TABLE sessions
   ON DELETE SET NULL
   NOT VALID;
 
--- Idempotent: add timer columns to existing databases
+-- Idempotent: add timer + type columns to existing databases
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS duration_seconds int DEFAULT NULL;
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS opened_at timestamptz DEFAULT NULL;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'dilemma';
+
+-- Word cloud responses (multiple words per participant per question)
+CREATE TABLE IF NOT EXISTS word_responses (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id     uuid NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  word            text NOT NULL,
+  participant_key text NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (question_id, participant_key, word)
+);

@@ -13,6 +13,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
+  type: "dilemma" | "wordcloud";
 };
 
 type Session = {
@@ -66,6 +67,7 @@ const color = (i: number) => COLORS[i % COLORS.length];
 
 const PKEY = "pollinator_pkey";
 const VOTES = "pollinator_votes";
+const WORDS = "pollinator_words";
 
 function getParticipantKey(): string {
   let k = localStorage.getItem(PKEY);
@@ -88,6 +90,17 @@ function persistVote(qid: string, idx: number) {
   const v = loadVotes();
   v[qid] = idx;
   localStorage.setItem(VOTES, JSON.stringify(v));
+}
+
+function loadWords(): Record<string, string[]> {
+  try { return JSON.parse(localStorage.getItem(WORDS) ?? "{}"); } catch { return {}; }
+}
+
+function persistWord(qid: string, word: string) {
+  const w = loadWords();
+  if (!w[qid]) w[qid] = [];
+  if (!w[qid].includes(word)) w[qid].push(word);
+  localStorage.setItem(WORDS, JSON.stringify(w));
 }
 
 /* ── Shared small pieces ────────────────────────────────────── */
@@ -294,17 +307,91 @@ function LoadingScreen() {
   );
 }
 
+/* ── Screen: ordsky input ───────────────────────────────────── */
+
+function WordCloudInputScreen({
+  question,
+  qNum,
+  submittedWords,
+  onSubmitWord,
+}: {
+  question: Question;
+  qNum: number;
+  submittedWords: string[];
+  onSubmitWord: (word: string) => Promise<void>;
+}) {
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const submit = async () => {
+    const word = input.trim().toLowerCase();
+    if (!word) return;
+    if (submittedWords.includes(word)) { setErr("Du har allerede sendt det ord"); return; }
+    setBusy(true);
+    setErr("");
+    await onSubmitWord(word);
+    setInput("");
+    setBusy(false);
+  };
+
+  return (
+    <div className={s.screen}>
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
+      <div className={s.qHead}>
+        <h1 className={s.qText}>{question.prompt}</h1>
+      </div>
+      <div className={s.wordArea}>
+        <div className={s.wordRow}>
+          <input
+            value={input}
+            onChange={(e) => { setInput(e.target.value); setErr(""); }}
+            onKeyDown={(e) => e.key === "Enter" && !busy && submit()}
+            placeholder="Skriv et ord og tryk Enter…"
+            className={s.wordInput}
+            autoFocus
+            autoCapitalize="off"
+            autoCorrect="off"
+          />
+          <button
+            onClick={submit}
+            disabled={busy || !input.trim()}
+            className={`${s.wordBtn}`}
+          >
+            Send
+          </button>
+        </div>
+        {err && <div className={s.wordErr}>{err}</div>}
+        {submittedWords.length > 0 && (
+          <div className={s.wordChips}>
+            {submittedWords.map((w) => (
+              <span key={w} className={s.wordChip}>{w}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────── */
 
 export default function ParticipantClient({ code }: { code: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<"loading" | "notfound" | "ok">("loading");
   const [votes, setVotes] = useState<Record<string, number>>({});
+  const [submittedWords, setSubmittedWords] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Hent gemte stemmer fra localStorage ved mount
+  // Hent gemte stemmer + ord fra localStorage ved mount
   useEffect(() => {
     setVotes(loadVotes());
+    setSubmittedWords(loadWords());
   }, []);
 
   // Poll session hvert 2.5 sek
@@ -355,6 +442,23 @@ export default function ParticipantClient({ code }: { code: string }) {
     }
   }, [session, submitting]);
 
+  const handleWordSubmit = useCallback(async (word: string) => {
+    if (!session?.current_question_id) return;
+    const qid = session.current_question_id;
+    const res = await fetch(`/api/questions/${qid}/words`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ word, participant_key: getParticipantKey() }),
+    });
+    if (res.ok || res.status === 409) {
+      persistWord(qid, word);
+      setSubmittedWords((prev) => ({
+        ...prev,
+        [qid]: [...(prev[qid] ?? []), ...(prev[qid]?.includes(word) ? [] : [word])],
+      }));
+    }
+  }, [session]);
+
   /* ── Render ─────────────────────────────────────────────── */
 
   if (status === "loading") return <LoadingScreen />;
@@ -371,6 +475,21 @@ export default function ParticipantClient({ code }: { code: string }) {
   if (!currentQ) return <LobbyScreen title={session.title} />;
 
   const qNum = session.questions.findIndex((q) => q.id === currentQ.id) + 1;
+
+  // ── Ordsky-flow ────────────────────────────────────────────
+  if (currentQ.type === "wordcloud") {
+    if (!currentQ.is_open) return <WaitingScreen />;
+    return (
+      <WordCloudInputScreen
+        question={currentQ}
+        qNum={qNum}
+        submittedWords={submittedWords[currentQ.id] ?? []}
+        onSubmitWord={handleWordSubmit}
+      />
+    );
+  }
+
+  // ── Dilemma-flow ───────────────────────────────────────────
   const votedIndex = votes[currentQ.id];
 
   // Allerede stemt → vis "Du svarede"
