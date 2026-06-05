@@ -147,7 +147,7 @@ export default function WordCloudCanvas({
         scale *= 0.8;
       }
 
-      if (cancelled) return;
+      if (cancelled || !svg) return;
 
       // Render
       while (svg.firstChild) svg.removeChild(svg.firstChild);
