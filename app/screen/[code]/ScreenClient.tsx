@@ -179,7 +179,7 @@ function ResultsScreen({
               <BarChart
                 layout="vertical"
                 data={chartData}
-                margin={{ top: 4, right: 120, bottom: 4, left: 0 }}
+                margin={{ top: 4, right: 120, bottom: 4, left: 8 }}
                 barCategoryGap="22%"
               >
                 <XAxis
@@ -190,11 +190,11 @@ function ResultsScreen({
                 <YAxis
                   type="category"
                   dataKey="label"
-                  width={220}
+                  width={320}
                   axisLine={false}
                   tickLine={false}
                   tick={{
-                    fill: "#9298a8",   /* --muted */
+                    fill: "#9298a8",
                     fontSize: 26,
                     fontWeight: 500,
                     letterSpacing: "0.01em",
@@ -208,9 +208,7 @@ function ResultsScreen({
                 <Bar
                   dataKey="pct"
                   radius={[0, 10, 10, 0]}
-                  isAnimationActive
-                  animationDuration={600}
-                  animationEasing="ease-out"
+                  isAnimationActive={false}
                 >
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
