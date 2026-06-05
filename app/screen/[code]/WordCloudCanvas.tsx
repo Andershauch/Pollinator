@@ -13,10 +13,19 @@ const COLORS = [
   "oklch(0.72 0.165 330)",
 ];
 
-function cloudColor(word: string) {
+function wordHash(word: string): number {
   let h = 0;
   for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) & 0xfffffff;
-  return COLORS[Math.abs(h) % COLORS.length];
+  return Math.abs(h);
+}
+
+function cloudColor(word: string) {
+  return COLORS[wordHash(word) % COLORS.length];
+}
+
+// ~25% of words rotate −90°, stable per word text
+function getRotation(word: string): number {
+  return wordHash(word) % 4 === 0 ? -90 : 0;
 }
 
 function makeRandom(seed: number) {
@@ -36,15 +45,16 @@ function calcSize(count: number, maxCount: number): number {
   return Math.round(22 + ratio * (112 - 22));
 }
 
+// Subtle float — reduced amplitudes
 const SVG_STYLE = `
   @keyframes wIn {
     from { opacity: 0; transform: scale(0.15); }
     to   { opacity: 1; transform: scale(1); }
   }
-  @keyframes wFloat0 { 0%,100% { transform: translateY(0px)  } 50% { transform: translateY(-7px) } }
-  @keyframes wFloat1 { 0%,100% { transform: translateY(-3px) } 50% { transform: translateY( 5px) } }
-  @keyframes wFloat2 { 0%,100% { transform: translateY(0px)  } 50% { transform: translateY(-9px) } }
-  @keyframes wFloat3 { 0%,100% { transform: translateY(-4px) } 50% { transform: translateY( 4px) } }
+  @keyframes wFloat0 { 0%,100% { transform: translateY(0px)  } 50% { transform: translateY(-3px) } }
+  @keyframes wFloat1 { 0%,100% { transform: translateY(-1px) } 50% { transform: translateY( 2px) } }
+  @keyframes wFloat2 { 0%,100% { transform: translateY(0px)  } 50% { transform: translateY(-4px) } }
+  @keyframes wFloat3 { 0%,100% { transform: translateY(-2px) } 50% { transform: translateY( 2px) } }
 `;
 
 const FLOAT_DURATIONS = [3.4, 3.9, 4.2, 2.9];
@@ -77,11 +87,11 @@ export default function WordCloudCanvas({
       currentNames.size === prevNames.size &&
       words.every((w) => prevNames.has(w.word));
 
-    // Count-only update: update font sizes in-place so float animations keep running
+    // Count-only update: animate font-size in-place, float animations keep running
     if (sameWords) {
       words.forEach((w) => {
         const el = textMapRef.current.get(w.word);
-        if (el) el.setAttribute("font-size", `${calcSize(w.count, maxCount)}px`);
+        if (el) el.style.fontSize = `${calcSize(w.count, maxCount)}px`;
       });
       return;
     }
@@ -99,7 +109,7 @@ export default function WordCloudCanvas({
         }))
       )
       .padding(10)
-      .rotate(0)
+      .rotate((d) => getRotation((d as LayoutWord).text ?? ""))
       .font("Bahnschrift, Oswald, sans-serif")
       .fontSize((d) => d.size)
       .random(makeRandom(seed))
@@ -130,15 +140,16 @@ export default function WordCloudCanvas({
 
           const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
           text.setAttribute("text-anchor", "middle");
-          text.setAttribute("font-size", `${w.size}px`);
           text.setAttribute("font-family", "Bahnschrift, Oswald, sans-serif");
           text.setAttribute("font-weight", "bold");
           text.setAttribute("fill", cloudColor(wordStr));
+          // font-size via style so CSS transition works
+          text.style.fontSize = `${w.size}px`;
+          text.style.transition = "font-size 0.55s ease-out";
           text.style.transformBox = "fill-box";
           text.style.transformOrigin = "center center";
 
           if (isNew) {
-            // Stagger entry on first render; immediate for later additions
             const entryDelay = isFirstRender ? i * 0.06 : 0;
             const floatStart = entryDelay + 0.45 + floatDelay * 0.25;
             text.style.animation =
