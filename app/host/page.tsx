@@ -1,342 +1,87 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-type Question = {
-  id: string;
-  prompt: string;
-  options: string[];
-  position: number;
-  is_open: boolean;
-};
-
-type Session = {
-  id: string;
-  code: string;
-  title: string;
-  state: "lobby" | "active" | "closed";
-  current_question_id: string | null;
-  questions: Question[];
-};
-
-export default function HostPage() {
-  const [title, setTitle] = useState("Workshop test");
-  const [session, setSession] = useState<Session | null>(null);
-  const [newPrompt, setNewPrompt] = useState("Er AI en trussel mod demokratiet?");
-  const [log, setLog] = useState<Record<string, unknown> | null>(null);
+export default function HostLanding() {
+  const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
-  function showLog(data: Record<string, unknown>) {
-    setLog(data);
-    setError(null);
-  }
-
-  async function run<T extends Record<string, unknown>>(fn: () => Promise<Response>): Promise<T | null> {
+  async function create() {
+    if (!title.trim()) return;
     setLoading(true);
-    setError(null);
+    setError("");
     try {
-      const res = await fn();
-      const data: T = await res.json();
-      showLog(data);
-      if (!res.ok) {
-        setError((data as { error?: string }).error ?? `HTTP ${res.status}`);
-        return null;
-      }
-      return data;
-    } catch (e) {
-      setError(String(e));
-      return null;
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Fejl"); return; }
+      router.push(`/host/${data.code}`);
+    } catch {
+      setError("Netværksfejl");
     } finally {
       setLoading(false);
     }
   }
 
-  async function createSession() {
-    const data = await run<Session>(() =>
-      fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      })
-    );
-    if (data) setSession({ ...data, questions: [] });
-  }
-
-  async function refresh() {
-    if (!session) return;
-    const data = await run<Session>(() =>
-      fetch(`/api/sessions/${session.code}`)
-    );
-    if (data) setSession(data);
-  }
-
-  async function addQuestion() {
-    if (!session) return;
-    const data = await run<Question>(() =>
-      fetch(`/api/sessions/${session.code}/questions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: newPrompt,
-          options: ["Enig", "Uenig", "Ved ikke"],
-        }),
-      })
-    );
-    if (data) {
-      setSession((s) => s ? { ...s, questions: [...s.questions, data] } : s);
-      setNewPrompt("");
-    }
-  }
-
-  async function patch(body: Record<string, unknown>) {
-    if (!session) return;
-    const data = await run<Session>(() =>
-      fetch(`/api/sessions/${session.code}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-    );
-    if (data) setSession((s) => s ? { ...s, ...data } : s);
-  }
-
-  const isActive = (qid: string) => session?.current_question_id === qid;
-
   return (
-    <main style={styles.page}>
-      <h1 style={styles.h1}>Pollinator – Host testside</h1>
-
-      {/* ── Opret session ── */}
-      {!session ? (
-        <section style={styles.card}>
-          <h2 style={styles.h2}>Opret session</h2>
-          <div style={styles.row}>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Sessionstitel"
-              style={styles.input}
-            />
-            <button onClick={createSession} disabled={loading} style={styles.btn}>
-              Opret session
-            </button>
-          </div>
-        </section>
-      ) : (
-        <>
-          {/* ── Session-header ── */}
-          <section style={styles.card}>
-            <div style={styles.row}>
-              <div>
-                <span style={styles.label}>Kode</span>
-                <span style={styles.code}>{session.code}</span>
-              </div>
-              <div>
-                <span style={styles.label}>Titel</span>
-                <span>{session.title}</span>
-              </div>
-              <div>
-                <span style={styles.label}>State</span>
-                <span style={{ ...styles.badge, background: stateColor(session.state) }}>
-                  {session.state}
-                </span>
-              </div>
-            </div>
-
-            {/* State-knapper */}
-            <div style={{ ...styles.row, marginTop: "0.75rem" }}>
-              {(["lobby", "active", "closed"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => patch({ state: s })}
-                  disabled={loading || session.state === s}
-                  style={{
-                    ...styles.btn,
-                    background: session.state === s ? "#555" : styles.btn.background,
-                  }}
-                >
-                  → {s}
-                </button>
-              ))}
-              <button onClick={refresh} disabled={loading} style={{ ...styles.btn, background: "#444" }}>
-                ↻ Refresh
-              </button>
-              <button
-                onClick={() => setSession(null)}
-                style={{ ...styles.btn, background: "#8a2a2a" }}
-              >
-                Ny session
-              </button>
-            </div>
-          </section>
-
-          {/* ── Tilføj spørgsmål ── */}
-          <section style={styles.card}>
-            <h2 style={styles.h2}>Tilføj spørgsmål</h2>
-            <p style={styles.hint}>Options er altid: Enig / Uenig / Ved ikke</p>
-            <div style={styles.row}>
-              <input
-                value={newPrompt}
-                onChange={(e) => setNewPrompt(e.target.value)}
-                placeholder="Spørgsmålstekst..."
-                style={{ ...styles.input, flexGrow: 1 }}
-                onKeyDown={(e) => e.key === "Enter" && addQuestion()}
-              />
-              <button onClick={addQuestion} disabled={loading || !newPrompt.trim()} style={styles.btn}>
-                Tilføj
-              </button>
-            </div>
-          </section>
-
-          {/* ── Spørgsmålsliste ── */}
-          {session.questions.length > 0 && (
-            <section style={styles.card}>
-              <h2 style={styles.h2}>Spørgsmål ({session.questions.length})</h2>
-              <ul style={styles.list}>
-                {session.questions.map((q, i) => (
-                  <li
-                    key={q.id}
-                    style={{
-                      ...styles.qItem,
-                      borderColor: isActive(q.id) ? "#4caf50" : "#333",
-                      background: isActive(q.id) ? "#0d1f0d" : "#1a1a1a",
-                    }}
-                  >
-                    <span style={styles.qNum}>{i + 1}</span>
-                    <span style={{ flex: 1 }}>{q.prompt}</span>
-                    <button
-                      onClick={() =>
-                        patch({ current_question_id: q.id, state: "active" })
-                      }
-                      disabled={loading || isActive(q.id)}
-                      style={{
-                        ...styles.btn,
-                        fontSize: "0.8rem",
-                        padding: "0.3rem 0.7rem",
-                        background: isActive(q.id) ? "#1a5c1a" : styles.btn.background,
-                      }}
-                    >
-                      {isActive(q.id) ? "✓ Aktivt" : "▶ Aktiver"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
-      )}
-
-      {/* ── Fejl ── */}
-      {error && (
-        <div style={styles.error}>⚠ {error}</div>
-      )}
-
-      {/* ── JSON-log ── */}
-      {log && (
-        <section style={styles.card}>
-          <h2 style={styles.h2}>Seneste API-svar</h2>
-          <pre style={styles.pre}>{JSON.stringify(log, null, 2)}</pre>
-        </section>
-      )}
+    <main style={p.page}>
+      <div style={p.card}>
+        <div style={p.brand}>
+          <span style={p.dot} />
+          <span style={p.name}>POLLINATOR</span>
+        </div>
+        <h1 style={p.h1}>Opret workshop</h1>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && create()}
+          placeholder="Navn på workshop…"
+          style={p.input}
+          autoFocus
+        />
+        {error && <div style={p.err}>{error}</div>}
+        <button onClick={create} disabled={loading || !title.trim()} style={p.btn}>
+          {loading ? "Opretter…" : "Opret session →"}
+        </button>
+      </div>
     </main>
   );
 }
 
-function stateColor(state: string) {
-  return state === "active" ? "#1a5c1a" : state === "closed" ? "#5c1a1a" : "#2a2a5c";
-}
-
-const styles = {
+const p: Record<string, React.CSSProperties> = {
   page: {
-    fontFamily: "'Courier New', monospace",
-    padding: "2rem",
-    maxWidth: "700px",
-    margin: "0 auto",
-    color: "#e0e0e0",
-    background: "#0d0d0d",
-    minHeight: "100vh",
-  } satisfies React.CSSProperties,
-  h1: { fontSize: "1.4rem", marginBottom: "1.5rem", color: "#fff" } satisfies React.CSSProperties,
-  h2: { fontSize: "1rem", marginBottom: "0.75rem", color: "#aaa" } satisfies React.CSSProperties,
+    minHeight: "100dvh", background: "var(--bg)", display: "flex",
+    alignItems: "center", justifyContent: "center",
+    fontFamily: '"Bahnschrift", var(--oswald,"Oswald"), "Segoe UI", system-ui, sans-serif',
+  },
   card: {
-    background: "#161616",
-    border: "1px solid #2a2a2a",
-    borderRadius: "6px",
-    padding: "1.25rem",
-    marginBottom: "1rem",
-  } satisfies React.CSSProperties,
-  row: { display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" as const } satisfies React.CSSProperties,
+    background: "var(--panel)", border: "1px solid var(--line)",
+    borderRadius: 16, padding: "48px 52px", width: "min(480px, 92vw)",
+    display: "flex", flexDirection: "column", gap: 20,
+  },
+  brand: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 },
+  dot: {
+    width: 11, height: 11, borderRadius: "50%", background: "var(--accent)",
+    boxShadow: "0 0 0 4px color-mix(in oklch, var(--accent) 20%, transparent)",
+  },
+  name: { fontSize: 13, fontWeight: 600, letterSpacing: "0.28em", color: "var(--fg)" },
+  h1: { fontSize: 32, fontWeight: 600, color: "var(--fg)", letterSpacing: "0.01em" },
   input: {
-    padding: "0.5rem 0.75rem",
-    background: "#222",
-    border: "1px solid #444",
-    color: "#e0e0e0",
-    borderRadius: "4px",
-    fontSize: "0.9rem",
-    minWidth: "240px",
-  } satisfies React.CSSProperties,
+    background: "var(--bg-2)", border: "1.5px solid var(--line-2)",
+    borderRadius: 10, padding: "14px 16px", fontSize: 18, color: "var(--fg)",
+    fontFamily: "inherit", outline: "none", width: "100%",
+  },
   btn: {
-    padding: "0.5rem 1rem",
-    background: "#2a2a8a",
-    color: "white",
-    border: "none",
-    cursor: "pointer",
-    borderRadius: "4px",
-    fontSize: "0.9rem",
-    whiteSpace: "nowrap" as const,
-  } satisfies React.CSSProperties,
-  label: {
-    display: "block",
-    fontSize: "0.7rem",
-    color: "#666",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    marginBottom: "2px",
-  } satisfies React.CSSProperties,
-  code: {
-    fontSize: "2rem",
-    fontWeight: "bold" as const,
-    letterSpacing: "0.25em",
-    color: "#fff",
-  } satisfies React.CSSProperties,
-  badge: {
-    padding: "0.25rem 0.75rem",
-    borderRadius: "4px",
-    fontSize: "0.85rem",
-  } satisfies React.CSSProperties,
-  hint: { fontSize: "0.8rem", color: "#555", margin: "0 0 0.75rem" } satisfies React.CSSProperties,
-  list: { listStyle: "none", padding: 0, margin: 0 } satisfies React.CSSProperties,
-  qItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    padding: "0.6rem 0.75rem",
-    border: "1px solid #333",
-    borderRadius: "4px",
-    marginBottom: "0.5rem",
-  } satisfies React.CSSProperties,
-  qNum: {
-    fontSize: "0.8rem",
-    color: "#555",
-    minWidth: "1.2rem",
-  } satisfies React.CSSProperties,
-  error: {
-    background: "#2d0a0a",
-    border: "1px solid #8a2a2a",
-    borderRadius: "4px",
-    padding: "0.75rem 1rem",
-    color: "#f87171",
-    marginBottom: "1rem",
-  } satisfies React.CSSProperties,
-  pre: {
-    background: "#0a0a0a",
-    color: "#4ade80",
-    padding: "1rem",
-    overflow: "auto",
-    fontSize: "0.78rem",
-    borderRadius: "4px",
-    margin: 0,
-    maxHeight: "400px",
-  } satisfies React.CSSProperties,
-} as const;
+    background: "var(--accent)", color: "#13150e", border: "none",
+    borderRadius: 10, padding: "14px 24px", fontSize: 16, fontWeight: 700,
+    fontFamily: "inherit", letterSpacing: "0.04em", cursor: "pointer",
+    opacity: 1, transition: "opacity 0.15s",
+  },
+  err: { color: "var(--c4)", fontSize: 14, letterSpacing: "0.04em" },
+};
