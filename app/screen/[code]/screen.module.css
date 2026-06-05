@@ -1,0 +1,230 @@
+/* ============================================================
+   Storskærm — designet til projektor / 16:9 display
+   Tokens fra globals.css (:root)
+   ============================================================ */
+
+.page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 52px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 22%, transparent);
+}
+
+.brandName {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: var(--fg);
+}
+
+.topCenter {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.liveTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c2);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+}
+
+.liveDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c2);
+  box-shadow: 0 0 12px color-mix(in oklch, var(--c2) 80%, transparent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 12px color-mix(in oklch, var(--c2) 80%, transparent); }
+  50%       { opacity: 0.6; box-shadow: 0 0 4px  color-mix(in oklch, var(--c2) 40%, transparent); }
+}
+
+/* ── Content area ────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 52px;
+  gap: 80px;
+}
+
+/* ── Lobby ───────────────────────────────────────────────── */
+
+.lobbyWrap {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+
+.qrCard {
+  background: var(--fg);
+  border-radius: 20px;
+  padding: 20px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joinInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.joinKicker {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.36em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.sessionCode {
+  font-size: clamp(80px, 10vw, 140px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--fg);
+  line-height: 1;
+}
+
+.joinUrl {
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  margin-top: 4px;
+}
+
+.sessionTitle {
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 20px;
+}
+
+/* ── Active / results ────────────────────────────────────── */
+
+.resultsWrap {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.questionText {
+  font-size: clamp(28px, 3.5vw, 52px);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+  color: var(--fg);
+}
+
+.chartArea {
+  flex: 1;
+  min-height: 320px;
+}
+
+.totalLine {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ── Closed / idle states ────────────────────────────────── */
+
+.idleWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+}
+
+.idleTitle {
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.idleSub {
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+/* Custom Recharts label */
+.barLabel {
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  fill: var(--fg);
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot { animation: none !important; }
+}
