@@ -219,6 +219,8 @@
 
 .wordCloud {
   width: 100%;
+  flex: 1;
+  min-height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;

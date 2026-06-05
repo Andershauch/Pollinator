@@ -299,17 +299,18 @@ function WordCloudScreen({
   const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
   const total = words.reduce((sum, w) => sum + w.count, 0);
 
-  // Mål cloud-containerens bredde responsivt
+  // Mål cloud-containerens faktiske bredde og højde responsivt
   const containerRef = useRef<HTMLDivElement>(null);
-  const [canvasW, setCanvasW] = useState(1100);
+  const [canvasDims, setCanvasDims] = useState({ w: 1100, h: 500 });
   useEffect(() => {
     if (!containerRef.current) return;
-    const ro = new ResizeObserver(([e]) => setCanvasW(e.contentRect.width));
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect;
+      setCanvasDims({ w: Math.round(width), h: Math.round(height) });
+    });
     ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
-
-  const cloudH = Math.max(320, Math.min(520, words.length * 28));
 
   return (
     <div className={s.page}>
@@ -327,14 +328,14 @@ function WordCloudScreen({
           </>
         }
       />
-      <div className={s.body} style={{ alignItems: "flex-start" }}>
-        <div className={s.resultsWrap}>
+      <div className={s.body} style={{ alignItems: "stretch" }}>
+        <div className={s.resultsWrap} style={{ flex: 1 }}>
           <h1 className={s.questionText}>{currentQ?.prompt ?? ""}</h1>
-          <div className={s.wordCloud} ref={containerRef} style={{ minHeight: cloudH }}>
+          <div className={s.wordCloud} ref={containerRef}>
             {words.length === 0 ? (
               <span className={s.idleSub}>Venter på ord…</span>
             ) : (
-              <WordCloudCanvas words={words} width={canvasW} height={cloudH} />
+              <WordCloudCanvas words={words} width={canvasDims.w} height={canvasDims.h} />
             )}
           </div>
           <div className={s.totalLine}>{total} {total === 1 ? "svar" : "svar"}</div>
