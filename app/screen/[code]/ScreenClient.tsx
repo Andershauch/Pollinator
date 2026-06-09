@@ -5,10 +5,6 @@ import { useEffect, useRef, useState } from "react";
 
 const WordCloudCanvas = dynamic(() => import("./WordCloudCanvas"), { ssr: false });
 import { QRCodeSVG } from "qrcode.react";
-import {
-  BarChart, Bar, XAxis, YAxis,
-  Cell, LabelList, ResponsiveContainer, Tooltip,
-} from "recharts";
 import s from "./screen.module.css";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -83,6 +79,122 @@ type Results = {
   tally: TallyItem[];
   total: number;
 };
+
+/* ── useCountUp ─────────────────────────────────────────────── */
+
+function useCountUp(target: number) {
+  const [display, setDisplay] = useState(target);
+  const frameRef = useRef<number>(0);
+  const prevRef = useRef(target);
+
+  useEffect(() => {
+    if (target <= prevRef.current) {
+      setDisplay(target);
+      prevRef.current = target;
+      return;
+    }
+    const from = prevRef.current;
+    prevRef.current = target;
+    const startTime = performance.now();
+    const duration = Math.min(700, (target - from) * 180);
+
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (target - from) * eased));
+      if (t < 1) frameRef.current = requestAnimationFrame(animate);
+    };
+    frameRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [target]);
+
+  return display;
+}
+
+/* ── DilemmaChart ───────────────────────────────────────────── */
+
+type ChartItem = { label: string; pct: number; color: string; votes: number };
+
+function DilemmaChart({ items, isOpen }: { items: ChartItem[]; isOpen: boolean }) {
+  const [shown, setShown] = useState(false);
+  const prevIsOpen = useRef<boolean | null>(null);
+
+  // Initial reveal
+  useEffect(() => {
+    const t = setTimeout(() => setShown(true), 150);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Re-reveal when question closes
+  useEffect(() => {
+    if (prevIsOpen.current === true && isOpen === false) {
+      setShown(false);
+      const t = setTimeout(() => setShown(true), 120);
+      prevIsOpen.current = isOpen;
+      return () => clearTimeout(t);
+    }
+    prevIsOpen.current = isOpen;
+  }, [isOpen]);
+
+  return (
+    <div className={s.dilemmaChart}>
+      {items.map((item, i) => (
+        <div key={i} className={s.chartRow}>
+          <div className={s.chartLabel}>{item.label}</div>
+          <div className={s.chartTrack}>
+            <div
+              className={s.chartFill}
+              style={{
+                width: shown ? `${Math.max(item.pct, item.pct > 0 ? 1 : 0)}%` : "0%",
+                background: item.color,
+                transitionProperty: "width",
+                transitionDuration: shown ? "0.7s" : "0s",
+                transitionDelay: shown ? `${i * 110}ms` : "0ms",
+                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            />
+          </div>
+          <div
+            className={s.chartPct}
+            style={{
+              opacity: shown ? 1 : 0,
+              transition: shown ? `opacity 0.35s ease ${i * 110 + 500}ms` : "none",
+            }}
+          >
+            {Math.round(item.pct)}%
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── ConsensusBadge ─────────────────────────────────────────── */
+
+function ConsensusBadge({ total, tally }: { total: number; tally: TallyItem[] }) {
+  if (total < 3) return null;
+  const topPct = Math.max(...tally.map((t) => total > 0 ? (t.votes / total) * 100 : 0));
+
+  let label: string;
+  let color: string;
+  let bg: string;
+  if (topPct >= 65) {
+    label = "STÆRK ENIGHED"; color = "oklch(0.79 0.15 158)";
+    bg = "color-mix(in oklch, oklch(0.79 0.15 158) 12%, transparent)";
+  } else if (topPct >= 50) {
+    label = "FLERTAL"; color = "oklch(0.82 0.155 78)";
+    bg = "color-mix(in oklch, oklch(0.82 0.155 78) 12%, transparent)";
+  } else {
+    label = "SPLITTET"; color = "oklch(0.72 0.165 330)";
+    bg = "color-mix(in oklch, oklch(0.72 0.165 330) 12%, transparent)";
+  }
+
+  return (
+    <span className={s.consensusBadge} style={{ color, background: bg, borderColor: color }}>
+      {label}
+    </span>
+  );
+}
 
 /* ── Design ─────────────────────────────────────────────────── */
 
@@ -159,28 +271,6 @@ function LobbyScreen({
   );
 }
 
-/* ── Recharts custom label ──────────────────────────────────── */
-
-function PctLabel(props: {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  value?: number;
-}) {
-  const { x = 0, y = 0, width = 0, height = 0, value = 0 } = props;
-  return (
-    <text
-      x={x + width + 18}
-      y={y + height / 2}
-      dominantBaseline="central"
-      className={s.barLabel}
-    >
-      {Math.round(value)}%
-    </text>
-  );
-}
-
 /* ── Active / results ───────────────────────────────────────── */
 
 function ResultsScreen({
@@ -190,13 +280,12 @@ function ResultsScreen({
   session: Session;
   results: Results;
 }) {
-  const qIdx = session.questions.findIndex(
-    (q) => q.id === session.current_question_id
-  );
+  const qIdx = session.questions.findIndex((q) => q.id === session.current_question_id);
   const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
 
   const total = results.total;
-  const chartData = results.tally.map((item) => ({
+  const displayTotal = useCountUp(total);
+  const chartItems: ChartItem[] = results.tally.map((item) => ({
     label: item.label,
     pct: total > 0 ? (item.votes / total) * 100 : 0,
     votes: item.votes,
@@ -210,15 +299,12 @@ function ResultsScreen({
         right={
           <>
             {qIdx >= 0 && (
-              <span>
-                SPØRGSMÅL {qIdx + 1} / {session.questions.length}
-              </span>
+              <span>SPØRGSMÅL {qIdx + 1} / {session.questions.length}</span>
             )}
-            {currentQ?.is_open && (
-              <ScreenTimer
-                openedAt={currentQ.opened_at}
-                durationSec={currentQ.duration_seconds}
-              />
+            {currentQ?.is_open ? (
+              <ScreenTimer openedAt={currentQ.opened_at} durationSec={currentQ.duration_seconds} />
+            ) : currentQ && (
+              <span className={s.closedBadge}>LUKKET</span>
             )}
             <LiveTag />
           </>
@@ -229,56 +315,13 @@ function ResultsScreen({
         <div className={s.resultsWrap}>
           <h1 className={s.questionText}>{results.prompt}</h1>
 
-          <div className={s.chartArea}>
-            <ResponsiveContainer width="100%" height={Math.max(280, chartData.length * 90)}>
-              <BarChart
-                layout="vertical"
-                data={chartData}
-                margin={{ top: 4, right: 120, bottom: 4, left: 8 }}
-                barCategoryGap="22%"
-              >
-                <XAxis
-                  type="number"
-                  domain={[0, 100]}
-                  hide
-                />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  width={320}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{
-                    fill: "#9298a8",
-                    fontSize: 26,
-                    fontWeight: 500,
-                    letterSpacing: "0.01em",
-                    fontFamily: "Bahnschrift, Oswald, Segoe UI, system-ui, sans-serif",
-                  }}
-                />
-                <Tooltip
-                  cursor={false}
-                  content={() => null}
-                />
-                <Bar
-                  dataKey="pct"
-                  radius={[0, 10, 10, 0]}
-                  isAnimationActive={false}
-                >
-                  {chartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                  <LabelList
-                    dataKey="pct"
-                    content={<PctLabel />}
-                  />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <DilemmaChart items={chartItems} isOpen={currentQ?.is_open ?? false} />
 
-          <div className={s.totalLine}>
-            {total} {total === 1 ? "svar" : "svar"}
+          <div className={s.bottomLine}>
+            <ConsensusBadge total={total} tally={results.tally} />
+            <span className={s.totalLine}>
+              {displayTotal} {displayTotal === 1 ? "svar" : "svar"}
+            </span>
           </div>
         </div>
       </div>
