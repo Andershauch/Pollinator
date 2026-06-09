@@ -297,6 +297,67 @@
   justify-content: center;
 }
 
+/* ── Consensus meter ─────────────────────────────────────── */
+
+.consensusMeter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.cmRow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.cmLabelLeft,
+.cmLabelRight {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--faint);
+  flex: 0 0 auto;
+  width: 90px;
+}
+
+.cmLabelRight { text-align: right; }
+
+.cmTrack {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-2);
+  border-radius: 999px;
+  position: relative;
+  overflow: visible;
+}
+
+.cmFill {
+  height: 100%;
+  border-radius: 999px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.cmDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cmStatus {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-align: center;
+}
+
 /* ── Scale histogram ─────────────────────────────────────── */
 
 .scaleLayout {

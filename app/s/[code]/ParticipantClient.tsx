@@ -1,7 +1,27 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import s from "./participant.module.css";
+
+/* ── Konfetti ───────────────────────────────────────────────── */
+
+function useConfetti() {
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    import("canvas-confetti").then(({ default: confetti }) => {
+      confetti({
+        particleCount: 80,
+        spread: 65,
+        origin: { y: 0.55 },
+        colors: ["#f59e0b", "#34d399", "#60a5fa", "#f472b6", "#a78bfa"],
+        scalar: 0.9,
+        ticks: 200,
+      });
+    });
+  }, []);
+}
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -221,6 +241,7 @@ function SubmittedScreen({
   qNum: number;
   question: Question;
 }) {
+  useConfetti();
   return (
     <div className={s.screen}>
       <TopBar right={
@@ -386,6 +407,7 @@ function ScaleSubmittedScreen({
 }: {
   value: number; qNum: number; question: Question;
 }) {
+  useConfetti();
   return (
     <div className={s.screen}>
       <TopBar right={

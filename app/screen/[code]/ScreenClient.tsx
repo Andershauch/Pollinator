@@ -367,6 +367,62 @@ function ConsensusBadge({ total, tally }: { total: number; tally: TallyItem[] })
   );
 }
 
+/* ── ConsensusMeter ─────────────────────────────────────────── */
+
+function ConsensusMeter({ total, tally }: { total: number; tally: TallyItem[] }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShown(true), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (total < 2) return null;
+
+  const n = tally.length;
+  const topPct = Math.max(...tally.map((t) => total > 0 ? (t.votes / total) * 100 : 0));
+  // Normalise: 1/n (equal split) → 0%, 100% (all same) → 100%
+  const minPossible = 100 / n;
+  const consensusPct = Math.max(0, Math.min(100, ((topPct - minPossible) / (100 - minPossible)) * 100));
+
+  let label: string;
+  let color: string;
+  if (consensusPct >= 65) { label = "STÆRK ENIGHED"; color = "oklch(0.79 0.15 158)"; }
+  else if (consensusPct >= 35) { label = "FLERTAL"; color = "oklch(0.82 0.155 78)"; }
+  else { label = "SPLITTET"; color = "oklch(0.72 0.165 330)"; }
+
+  return (
+    <div className={s.consensusMeter}>
+      <div className={s.cmRow}>
+        <span className={s.cmLabelLeft}>SPLITTET</span>
+        <div className={s.cmTrack}>
+          <div
+            className={s.cmFill}
+            style={{
+              width: shown ? `${consensusPct}%` : "0%",
+              background: color,
+              transition: shown ? "width 1.1s cubic-bezier(0.4,0,0.2,1)" : "none",
+            }}
+          />
+          {/* Marker dot */}
+          <div
+            className={s.cmDot}
+            style={{
+              left: shown ? `calc(${consensusPct}% - 8px)` : "-8px",
+              background: color,
+              boxShadow: `0 0 12px ${color}`,
+              transition: shown ? "left 1.1s cubic-bezier(0.4,0,0.2,1)" : "none",
+            }}
+          />
+        </div>
+        <span className={s.cmLabelRight}>ENIGHED</span>
+      </div>
+      <div className={s.cmStatus} style={{ color }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
 /* ── Design ─────────────────────────────────────────────────── */
 
 // Samme farveorden som deltager-siden
@@ -488,8 +544,10 @@ function ResultsScreen({
 
           <DilemmaChart items={chartItems} isOpen={currentQ?.is_open ?? false} />
 
+          <ConsensusMeter total={total} tally={results.tally} />
+
           <div className={s.bottomLine}>
-            <ConsensusBadge total={total} tally={results.tally} />
+            <span />
             <span className={s.totalLine}>
               {displayTotal} {displayTotal === 1 ? "svar" : "svar"}
             </span>

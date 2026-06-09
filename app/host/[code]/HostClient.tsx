@@ -5,6 +5,13 @@ import s from "./host.module.css";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
+type BankQuestion = {
+  prompt: string;
+  type: "dilemma" | "wordcloud" | "scale";
+  options: string[];
+  times_used: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -112,6 +119,11 @@ export default function HostClient({ code }: { code: string }) {
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
+  // Spørgsmålsbank
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bank, setBank] = useState<BankQuestion[]>([]);
+  const [bankLoading, setBankLoading] = useState(false);
+
   /* ── Polling ─────────────────────────────────────────────── */
 
   useEffect(() => {
@@ -191,6 +203,36 @@ export default function HostClient({ code }: { code: string }) {
 
   const setSessionState = (state: Session["state"]) =>
     patchSession({ state });
+
+  /* ── Bank ────────────────────────────────────────────────── */
+
+  async function openBank() {
+    setBankOpen(true);
+    if (bank.length > 0) return;
+    setBankLoading(true);
+    try {
+      const res = await fetch("/api/questions/bank");
+      if (res.ok) setBank(await res.json());
+    } finally {
+      setBankLoading(false);
+    }
+  }
+
+  function applyFromBank(q: BankQuestion) {
+    setQType(q.type);
+    setPrompt(q.prompt);
+    if (q.type === "dilemma") {
+      setOptions(q.options.length >= 2 ? q.options : DEFAULT_OPTIONS);
+    } else if (q.type === "scale") {
+      setScaleLowLabel(q.options[0] ?? "Slet ikke");
+      setScaleHighLabel(q.options[1] ?? "Fuldstændig");
+    }
+    setBankOpen(false);
+    // Scroll form into view on mobile
+    setTimeout(() => {
+      document.getElementById("addForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }
 
   /* ── Add question ────────────────────────────────────────── */
 
@@ -433,8 +475,13 @@ export default function HostClient({ code }: { code: string }) {
           )}
 
           {/* Tilføj spørgsmål */}
-          <div className={s.commandBlock}>
-            <div className={s.commandTitle}>Tilføj spørgsmål</div>
+          <div className={s.commandBlock} id="addForm">
+            <div className={s.commandTitleRow}>
+              <span className={s.commandTitle}>Tilføj spørgsmål</span>
+              <button className={s.bankTrigger} onClick={openBank} type="button">
+                Fra bank ↑
+              </button>
+            </div>
 
             <div className={s.formBlock}>
 
@@ -543,6 +590,92 @@ export default function HostClient({ code }: { code: string }) {
 
         </aside>
       </div>
+
+      {/* ── Sticky mobile action bar ──────────────────────── */}
+      <div className={s.stickyBar}>
+        <div className={s.stickyInfo}>
+          {session.state !== "active" && (
+            <span className={s.stickyHint}>Session er ikke aktiv</span>
+          )}
+          {session.state === "active" && !currentQ && (
+            <span className={s.stickyHint}>Klar — åbn første spørgsmål</span>
+          )}
+          {session.state === "active" && currentQ && (
+            <>
+              <span className={s.stickyNum}>{currentIdx + 1}</span>
+              <span className={s.stickyPromptText}>{currentQ.prompt}</span>
+            </>
+          )}
+        </div>
+        <div className={s.stickyActions}>
+          {session.state !== "active" && (
+            <button
+              className={`${s.btn} ${s.btnPrimary} ${s.stickyBtn}`}
+              onClick={() => setSessionState("active")}
+              disabled={loading || sorted.length === 0}
+            >
+              Start session
+            </button>
+          )}
+          {session.state === "active" && !currentQ && sorted.length > 0 && (
+            <button
+              className={`${s.btn} ${s.btnPrimary} ${s.stickyBtn}`}
+              onClick={() => openQuestion(sorted[0])}
+              disabled={loading}
+            >
+              Åbn første →
+            </button>
+          )}
+          {session.state === "active" && currentQ?.is_open && (
+            <button
+              className={`${s.btn} ${s.btnDanger} ${s.stickyBtn}`}
+              onClick={closeQuestion}
+              disabled={loading}
+            >
+              Luk svar ■
+            </button>
+          )}
+          {session.state === "active" && currentQ && !currentQ.is_open && (
+            <button
+              className={`${s.btn} ${s.btnPrimary} ${s.stickyBtn}`}
+              onClick={hasNext ? nextQuestion : undefined}
+              disabled={loading || !hasNext}
+            >
+              {hasNext ? "Næste →" : "Færdig ✓"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Bank drawer ───────────────────────────────────── */}
+      {bankOpen && (
+        <div className={s.bankOverlay} onClick={() => setBankOpen(false)}>
+          <div className={s.bankDrawer} onClick={(e) => e.stopPropagation()}>
+            <div className={s.bankHead}>
+              <span className={s.bankTitle}>Spørgsmålsbank</span>
+              <button className={s.bankClose} onClick={() => setBankOpen(false)}>×</button>
+            </div>
+            <div className={s.bankList}>
+              {bankLoading && (
+                <div className={s.bankEmpty}>Henter…</div>
+              )}
+              {!bankLoading && bank.length === 0 && (
+                <div className={s.bankEmpty}>Ingen tidligere spørgsmål endnu.</div>
+              )}
+              {bank.map((q, i) => (
+                <button key={i} className={s.bankItem} onClick={() => applyFromBank(q)}>
+                  <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
+                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : "DILEMMA"}
+                  </span>
+                  <span className={s.bankPrompt}>{q.prompt}</span>
+                  <span className={s.bankUsed}>{q.times_used}×</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
