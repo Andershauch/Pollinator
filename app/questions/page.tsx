@@ -44,8 +44,8 @@ export default async function QuestionsPage() {
             {questions.map((q, i) => (
               <div key={i} style={s.card}>
                 <div style={s.cardLeft}>
-                  <span style={q.type === "wordcloud" ? { ...s.badge, ...s.badgeCloud } : { ...s.badge, ...s.badgeDilemma }}>
-                    {q.type === "wordcloud" ? "ORDSKY" : "DILEMMA"}
+                  <span style={q.type === "wordcloud" ? { ...s.badge, ...s.badgeCloud } : q.type === "scale" ? { ...s.badge, ...s.badgeScale } : { ...s.badge, ...s.badgeDilemma }}>
+                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA 1–10" : "DILEMMA"}
                   </span>
                   <span style={s.prompt}>{q.prompt}</span>
                   {q.type === "dilemma" && q.options && (
@@ -101,6 +101,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   badgeCloud: { background: "color-mix(in oklch, var(--c1) 15%, transparent)", color: "var(--c1)", borderColor: "color-mix(in oklch, var(--c1) 35%, transparent)" },
   badgeDilemma: { background: "color-mix(in oklch, var(--c2) 15%, transparent)", color: "var(--c2)", borderColor: "color-mix(in oklch, var(--c2) 35%, transparent)" },
+  badgeScale: { background: "color-mix(in oklch, var(--c3) 15%, transparent)", color: "var(--c3)", borderColor: "color-mix(in oklch, var(--c3) 35%, transparent)" },
   prompt: { fontSize: 16, fontWeight: 500, color: "var(--fg)" },
   options: { display: "flex", gap: 6, flexWrap: "wrap", width: "100%", marginTop: 4 },
   optChip: {

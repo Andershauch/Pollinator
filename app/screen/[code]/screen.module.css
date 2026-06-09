@@ -297,6 +297,134 @@
   justify-content: center;
 }
 
+/* ── Scale histogram ─────────────────────────────────────── */
+
+.scaleLayout {
+  display: flex;
+  align-items: stretch;
+  gap: 60px;
+  width: 100%;
+}
+
+.scaleAvgPanel {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding-right: 40px;
+  border-right: 1px solid var(--line);
+}
+
+.scaleAvgLabel {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--muted);
+}
+
+.scaleAvgNum {
+  font-size: clamp(64px, 7vw, 104px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.scaleAvgSub {
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+
+.scaleEndLabelsScreen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.scaleEndItem {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scaleEndVal {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--faint);
+  min-width: 24px;
+}
+
+.scaleHistWrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.scaleHistogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  height: 220px;
+}
+
+.scaleCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 0;
+}
+
+.scaleCount {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  height: 22px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.scaleBarTrack {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-2);
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  flex-direction: column-reverse;
+  overflow: hidden;
+}
+
+.scaleBarFill {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+}
+
+.scaleValLabel {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  padding-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Custom Recharts label */
 .barLabel {
   font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;

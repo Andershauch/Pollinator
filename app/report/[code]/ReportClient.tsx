@@ -15,11 +15,14 @@ type WordItem = { word: string; count: number };
 type Question = {
   id: string;
   prompt: string;
-  type: "dilemma" | "wordcloud";
+  type: "dilemma" | "wordcloud" | "scale";
   position: number;
   total: number;
   tally?: TallyItem[];
   words?: WordItem[];
+  average?: number;
+  lowLabel?: string;
+  highLabel?: string;
 };
 
 type Session = { code: string; title: string; created_at: string };
@@ -34,12 +37,19 @@ function buildCSV(session: Session, questions: Question[]): string {
     "",
   ];
 
+  const typeName = (type: string) =>
+    type === "wordcloud" ? "Ordsky" : type === "scale" ? "Skala" : "Dilemma";
+
   questions.forEach((q, i) => {
-    lines.push(`Spørgsmål ${i + 1} (${q.type === "wordcloud" ? "Ordsky" : "Dilemma"}):,"${q.prompt}"`);
+    lines.push(`Spørgsmål ${i + 1} (${typeName(q.type)}):,"${q.prompt}"`);
     lines.push(`Svar i alt:,${q.total}`);
     if (q.type === "dilemma" && q.tally) {
       lines.push("Svarforslag,Stemmer,Pct");
       q.tally.forEach((t) => lines.push(`"${t.label}",${t.votes},${t.pct}%`));
+    } else if (q.type === "scale" && q.tally) {
+      lines.push(`Gennemsnit:,${q.average?.toFixed(2) ?? "–"}`);
+      lines.push("Værdi,Stemmer,Pct");
+      q.tally.forEach((t) => lines.push(`${t.index},${t.votes},${t.pct}%`));
     } else if (q.type === "wordcloud" && q.words) {
       lines.push("Ord,Antal");
       q.words.forEach((w) => lines.push(`"${w.word}",${w.count}`));
@@ -111,6 +121,58 @@ function WordResult({ words, total }: { words: WordItem[]; total: number }) {
   );
 }
 
+/* ── Scale result ───────────────────────────────────────────── */
+
+function ScaleResult({
+  tally,
+  total,
+  average,
+  lowLabel,
+  highLabel,
+}: {
+  tally: TallyItem[];
+  total: number;
+  average?: number;
+  lowLabel?: string;
+  highLabel?: string;
+}) {
+  const maxVotes = Math.max(1, ...tally.map((t) => t.votes));
+  return (
+    <div className={s.scaleWrap}>
+      {average !== undefined && (
+        <div className={s.scaleAvg}>
+          <span className={s.scaleAvgNum}>{average.toFixed(1)}</span>
+          <span className={s.scaleAvgLabel}>gennemsnit</span>
+        </div>
+      )}
+      <div className={s.scaleBars}>
+        {tally.map((item) => (
+          <div key={item.index} className={s.scaleBar}>
+            <div className={s.scaleBarCount}>{item.votes > 0 ? item.votes : ""}</div>
+            <div className={s.scaleBarTrack}>
+              <div
+                className={s.scaleBarFill}
+                style={{
+                  height: `${(item.votes / maxVotes) * 100}%`,
+                  background: COLORS[Math.floor((item.index - 1) / 2.5) % COLORS.length],
+                }}
+              />
+            </div>
+            <div className={s.scaleBarLabel}>{item.index}</div>
+          </div>
+        ))}
+      </div>
+      {(lowLabel || highLabel) && (
+        <div className={s.scaleEndRow}>
+          <span>{lowLabel}</span>
+          <span>{highLabel}</span>
+        </div>
+      )}
+      <div className={s.totalNote}>{total} svar i alt</div>
+    </div>
+  );
+}
+
 /* ── Main ───────────────────────────────────────────────────── */
 
 export default function ReportClient({
@@ -153,13 +215,22 @@ export default function ReportClient({
             <div className={s.cardHead}>
               <span className={s.qNum}>{i + 1}</span>
               <span className={s.qTypeBadge}>
-                {q.type === "wordcloud" ? "ORDSKY" : "DILEMMA"}
+                {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA 1–10" : "DILEMMA"}
               </span>
               <h2 className={s.qPrompt}>{q.prompt}</h2>
             </div>
             <div className={s.cardBody}>
               {q.type === "dilemma" && q.tally && (
                 <DilemmaResult tally={q.tally} total={q.total} />
+              )}
+              {q.type === "scale" && q.tally && (
+                <ScaleResult
+                  tally={q.tally}
+                  total={q.total}
+                  average={q.average}
+                  lowLabel={q.lowLabel}
+                  highLabel={q.highLabel}
+                />
               )}
               {q.type === "wordcloud" && q.words && (
                 <WordResult words={q.words} total={q.total} />

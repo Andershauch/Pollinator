@@ -412,6 +412,103 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* ── Scale / slider ─────────────────────────────────────── */
+
+.scaleArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 18px 0 6px;
+}
+
+.scaleGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.scalePick {
+  aspect-ratio: 1;
+  width: 100%;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scalePick:hover {
+  border-color: var(--line-2);
+  color: var(--fg);
+}
+
+.scalePick:active {
+  transform: scale(0.93);
+}
+
+.scalePick:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.scalePickOn {
+  background: color-mix(in oklch, var(--c1) 20%, var(--panel));
+  border-color: var(--c1) !important;
+  color: var(--c1) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--c1) 20%, transparent);
+}
+
+.scaleEndLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.scaleSubmit {
+  width: 100%;
+  padding: 18px;
+  background: var(--c1);
+  color: #13150e;
+  border: none;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: opacity 0.12s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scaleSubmit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.scaleSubmit:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.scaleBigNum {
+  font-size: 96px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--c1);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Reduced motion ──────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

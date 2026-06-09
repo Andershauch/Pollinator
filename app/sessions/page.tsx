@@ -56,6 +56,7 @@ export default async function SessionsPage() {
                     <span>{sess.question_count} spørgsmål</span>
                     {sess.types.includes("wordcloud") && <span style={{ ...s.badge, ...s.badgeCloud }}>ORDSKY</span>}
                     {sess.types.includes("dilemma") && <span style={{ ...s.badge, ...s.badgeDilemma }}>DILEMMA</span>}
+                    {sess.types.includes("scale") && <span style={{ ...s.badge, ...s.badgeScale }}>SKALA</span>}
                   </div>
                 </div>
                 <div style={s.cardActions}>
@@ -104,6 +105,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   badgeCloud: { background: "color-mix(in oklch, var(--c1) 15%, transparent)", color: "var(--c1)", borderColor: "color-mix(in oklch, var(--c1) 35%, transparent)" },
   badgeDilemma: { background: "color-mix(in oklch, var(--c2) 15%, transparent)", color: "var(--c2)", borderColor: "color-mix(in oklch, var(--c2) 35%, transparent)" },
+  badgeScale: { background: "color-mix(in oklch, var(--c3) 15%, transparent)", color: "var(--c3)", borderColor: "color-mix(in oklch, var(--c3) 35%, transparent)" },
   cardActions: { display: "flex", gap: 10, flexShrink: 0 },
   btnPrimary: {
     background: "var(--accent)", color: "#13150e", border: "none", borderRadius: 9,

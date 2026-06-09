@@ -26,6 +26,7 @@ export default async function ReportPage({ params }: Props) {
   type QuestionResult = {
     id: string; prompt: string; type: string; position: number; total: number;
     tally?: TallyItem[]; words?: WordItem[];
+    average?: number; lowLabel?: string; highLabel?: string;
   };
 
   const questionData: QuestionResult[] = await Promise.all(
@@ -39,6 +40,26 @@ export default async function ReportPage({ params }: Props) {
         `) as WordItem[];
         const total = words.reduce((s, w) => s + w.count, 0);
         return { id: q.id as string, prompt: q.prompt as string, type: q.type as string, position: q.position as number, words, total };
+      } else if (q.type === "scale") {
+        const counts = (await sql`
+          SELECT option_index, COUNT(*)::int AS votes
+          FROM responses WHERE question_id = ${q.id as string}
+          GROUP BY option_index ORDER BY option_index
+        `) as { option_index: number; votes: number }[];
+        const tally: TallyItem[] = Array.from({ length: 10 }, (_, i) => {
+          const val = i + 1;
+          const votes = counts.find((r) => r.option_index === val)?.votes ?? 0;
+          return { index: val, label: String(val), votes, pct: 0 };
+        });
+        const total = tally.reduce((s, t) => s + t.votes, 0);
+        tally.forEach((t) => { t.pct = total > 0 ? Math.round((t.votes / total) * 100) : 0; });
+        const average = total > 0 ? tally.reduce((s, t) => s + t.index * t.votes, 0) / total : 0;
+        const options = q.options as string[];
+        return {
+          id: q.id as string, prompt: q.prompt as string, type: "scale", position: q.position as number,
+          total, tally, average,
+          lowLabel: options[0] ?? "", highLabel: options[1] ?? "",
+        };
       } else {
         const tally = (await sql`
           SELECT option_index, COUNT(*)::int AS votes

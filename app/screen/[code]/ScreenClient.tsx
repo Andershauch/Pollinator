@@ -17,7 +17,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud";
+  type: "dilemma" | "wordcloud" | "scale";
 };
 
 type WordEntry = { word: string; count: number };
@@ -76,8 +76,12 @@ function ScreenTimer({ openedAt, durationSec }: { openedAt: string | null; durat
 type Results = {
   question_id: string;
   prompt: string;
+  type?: string;
   tally: TallyItem[];
   total: number;
+  average?: number;
+  lowLabel?: string;
+  highLabel?: string;
 };
 
 /* ── useCountUp ─────────────────────────────────────────────── */
@@ -109,6 +113,173 @@ function useCountUp(target: number) {
   }, [target]);
 
   return display;
+}
+
+/* ── useCountUpFloat ────────────────────────────────────────── */
+
+function useCountUpFloat(target: number, decimals = 1) {
+  const [display, setDisplay] = useState(target);
+  const frameRef = useRef<number>(0);
+  const prevRef = useRef(target);
+
+  useEffect(() => {
+    if (target <= prevRef.current) {
+      setDisplay(target);
+      prevRef.current = target;
+      return;
+    }
+    const from = prevRef.current;
+    prevRef.current = target;
+    const startTime = performance.now();
+    const duration = Math.min(900, Math.abs(target - from) * 350);
+
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const val = from + (target - from) * eased;
+      setDisplay(parseFloat(val.toFixed(decimals)));
+      if (t < 1) frameRef.current = requestAnimationFrame(animate);
+    };
+    frameRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [target, decimals]);
+
+  return display;
+}
+
+/* ── ScaleHistogram ─────────────────────────────────────────── */
+
+function ScaleHistogram({
+  tally,
+  isOpen,
+}: {
+  tally: TallyItem[];
+  isOpen: boolean;
+}) {
+  const [shown, setShown] = useState(false);
+  const prevIsOpen = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShown(true), 150);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (prevIsOpen.current === true && isOpen === false) {
+      setShown(false);
+      const t = setTimeout(() => setShown(true), 120);
+      prevIsOpen.current = isOpen;
+      return () => clearTimeout(t);
+    }
+    prevIsOpen.current = isOpen;
+  }, [isOpen]);
+
+  const maxVotes = Math.max(...tally.map((t) => t.votes), 1);
+
+  return (
+    <div className={s.scaleHistogram}>
+      {tally.map((item, i) => {
+        const heightPct = shown ? (item.votes / maxVotes) * 100 : 0;
+        const delay = shown ? i * 45 : 0;
+        return (
+          <div key={item.index} className={s.scaleCol}>
+            <div
+              className={s.scaleCount}
+              style={{
+                opacity: shown && item.votes > 0 ? 1 : 0,
+                transition: shown ? `opacity 0.3s ease ${delay + 400}ms` : "none",
+              }}
+            >
+              {item.votes}
+            </div>
+            <div className={s.scaleBarTrack}>
+              <div
+                className={s.scaleBarFill}
+                style={{
+                  height: `${heightPct}%`,
+                  background: COLORS[Math.floor((item.index - 1) / 2.5) % COLORS.length],
+                  transitionProperty: "height",
+                  transitionDuration: shown ? "0.6s" : "0s",
+                  transitionDelay: `${delay}ms`,
+                  transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              />
+            </div>
+            <div className={s.scaleValLabel}>{item.index}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── ScaleScreen ────────────────────────────────────────────── */
+
+function ScaleScreen({
+  session,
+  results,
+}: {
+  session: Session;
+  results: Results;
+}) {
+  const qIdx = session.questions.findIndex((q) => q.id === session.current_question_id);
+  const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
+
+  const total = results.total;
+  const displayTotal = useCountUp(total);
+  const displayAvg = useCountUpFloat(results.average ?? 0);
+
+  return (
+    <div className={s.page}>
+      <TopBar
+        title={session.title}
+        right={
+          <>
+            {qIdx >= 0 && (
+              <span>SPØRGSMÅL {qIdx + 1} / {session.questions.length}</span>
+            )}
+            {currentQ?.is_open ? (
+              <ScreenTimer openedAt={currentQ.opened_at} durationSec={currentQ.duration_seconds} />
+            ) : currentQ && (
+              <span className={s.closedBadge}>LUKKET</span>
+            )}
+            <LiveTag />
+          </>
+        }
+      />
+
+      <div className={s.body} style={{ alignItems: "flex-start" }}>
+        <div className={s.resultsWrap}>
+          <h1 className={s.questionText}>{results.prompt}</h1>
+
+          <div className={s.scaleLayout}>
+            {/* Left: big average */}
+            <div className={s.scaleAvgPanel}>
+              <div className={s.scaleAvgLabel}>GENNEMSNIT</div>
+              <div className={s.scaleAvgNum}>{displayAvg.toFixed(1)}</div>
+              <div className={s.scaleAvgSub}>ud af 10</div>
+              {(results.lowLabel || results.highLabel) && (
+                <div className={s.scaleEndLabelsScreen}>
+                  {results.lowLabel && <div className={s.scaleEndItem}><span className={s.scaleEndVal}>1</span>{results.lowLabel}</div>}
+                  {results.highLabel && <div className={s.scaleEndItem}><span className={s.scaleEndVal}>10</span>{results.highLabel}</div>}
+                </div>
+              )}
+            </div>
+
+            {/* Right: histogram */}
+            <div className={s.scaleHistWrap}>
+              <ScaleHistogram tally={results.tally} isOpen={currentQ?.is_open ?? false} />
+            </div>
+          </div>
+
+          <div className={s.bottomLine}>
+            <span />
+            <span className={s.totalLine}>{displayTotal} {displayTotal === 1 ? "svar" : "svar"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ── DilemmaChart ───────────────────────────────────────────── */
@@ -516,7 +687,9 @@ export default function ScreenClient({ code }: { code: string }) {
   let screenContent: React.ReactNode;
   if (session.current_question_id && activeQ?.type === "wordcloud" && words !== null) {
     screenContent = <WordCloudScreen session={session} words={words} />;
-  } else if (session.current_question_id && activeQ?.type !== "wordcloud" && results) {
+  } else if (session.current_question_id && activeQ?.type === "scale" && results) {
+    screenContent = <ScaleScreen session={session} results={results} />;
+  } else if (session.current_question_id && activeQ?.type === "dilemma" && results) {
     screenContent = <ResultsScreen session={session} results={results} />;
   } else {
     screenContent = <LobbyScreen session={session} joinUrl={joinUrl} />;

@@ -13,7 +13,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud";
+  type: "dilemma" | "wordcloud" | "scale";
 };
 
 type Session = {
@@ -307,6 +307,85 @@ function LoadingScreen() {
   );
 }
 
+/* ── Screen: skala input ────────────────────────────────────── */
+
+function ScaleInputScreen({
+  question, qNum, submitting, onVote,
+}: {
+  question: Question; qNum: number; submitting: boolean; onVote: (idx: number) => void;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const lowLabel = question.options[0] ?? "";
+  const highLabel = question.options[1] ?? "";
+
+  return (
+    <div className={s.screen}>
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
+      <div className={s.qHead}>
+        <h1 className={s.qText}>{question.prompt}</h1>
+      </div>
+      <div className={s.scaleArea}>
+        <div className={s.scaleGrid}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <button
+              key={n}
+              className={`${s.scalePick}${selected === n ? ` ${s.scalePickOn}` : ""}`}
+              onClick={() => setSelected(n)}
+              disabled={submitting}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        {(lowLabel || highLabel) && (
+          <div className={s.scaleEndLabels}>
+            <span>{lowLabel}</span>
+            <span>{highLabel}</span>
+          </div>
+        )}
+        <button
+          className={s.scaleSubmit}
+          onClick={() => selected !== null && onVote(selected)}
+          disabled={selected === null || submitting}
+        >
+          {submitting ? "Sender…" : "Send svar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ScaleSubmittedScreen({
+  value, qNum, question,
+}: {
+  value: number; qNum: number; question: Question;
+}) {
+  return (
+    <div className={s.screen}>
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
+      <div className={`${s.main} ${s.center}`}>
+        <CheckRing sm />
+        <div className={s.submittedLabel}>DU SVAREDE</div>
+        <div className={s.scaleBigNum}>{value}</div>
+        <div className={s.subLabel}>ud af 10</div>
+      </div>
+      <div className={s.foot}>
+        <WaitingIndicator text="Venter på at spørgsmålet lukker" />
+      </div>
+    </div>
+  );
+}
+
 /* ── Screen: ordsky input ───────────────────────────────────── */
 
 function WordCloudInputScreen({
@@ -485,6 +564,25 @@ export default function ParticipantClient({ code }: { code: string }) {
         qNum={qNum}
         submittedWords={submittedWords[currentQ.id] ?? []}
         onSubmitWord={handleWordSubmit}
+      />
+    );
+  }
+
+  // ── Skala-flow ─────────────────────────────────────────────
+  if (currentQ.type === "scale") {
+    const scaleVote = votes[currentQ.id];
+    if (scaleVote !== undefined) {
+      return (
+        <ScaleSubmittedScreen value={scaleVote} qNum={qNum} question={currentQ} />
+      );
+    }
+    if (!currentQ.is_open) return <WaitingScreen />;
+    return (
+      <ScaleInputScreen
+        question={currentQ}
+        qNum={qNum}
+        submitting={submitting}
+        onVote={handleVote}
       />
     );
   }
