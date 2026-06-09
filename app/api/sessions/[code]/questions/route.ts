@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { code } = await params;
   const { prompt, options, position, duration_seconds, type } = await req.json();
 
-  const qtype = type === "wordcloud" ? "wordcloud" : "dilemma";
+  const qtype = type === "wordcloud" ? "wordcloud" : type === "scale" ? "scale" : "dilemma";
   const needsOptions = qtype === "dilemma";
 
   if (!prompt?.trim()) {
@@ -42,7 +42,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     ? duration_seconds
     : null;
 
-  const safeOptions = needsOptions ? options : [];
+  // Scale: store [lowLabel, highLabel] in options
+  const safeOptions = needsOptions ? options : (qtype === "scale" && Array.isArray(options) ? options.slice(0, 2) : []);
 
   const rows = await sql`
     INSERT INTO questions (session_id, prompt, options, position, duration_seconds, type)

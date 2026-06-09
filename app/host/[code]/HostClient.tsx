@@ -13,7 +13,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud";
+  type: "dilemma" | "wordcloud" | "scale";
 };
 
 type Session = {
@@ -103,7 +103,9 @@ export default function HostClient({ code }: { code: string }) {
   const [error, setError] = useState("");
 
   // Add-question form state
-  const [qType, setQType] = useState<"dilemma" | "wordcloud">("dilemma");
+  const [qType, setQType] = useState<"dilemma" | "wordcloud" | "scale">("dilemma");
+  const [scaleLowLabel, setScaleLowLabel] = useState("Slet ikke");
+  const [scaleHighLabel, setScaleHighLabel] = useState("Fuldstændig");
   const [prompt, setPrompt] = useState("");
   const [options, setOptions] = useState(DEFAULT_OPTIONS);
   const [durationSec, setDurationSec] = useState<number | null>(null);
@@ -194,9 +196,16 @@ export default function HostClient({ code }: { code: string }) {
 
   async function addQuestion() {
     const trimmed = prompt.trim();
-    const validOpts = options.map((o) => o.trim()).filter(Boolean);
     if (!trimmed) { setAddError("Prompt er påkrævet"); return; }
-    if (validOpts.length < 2) { setAddError("Mindst 2 svarforslag"); return; }
+
+    let bodyOptions: string[] = [];
+    if (qType === "dilemma") {
+      const validOpts = options.map((o) => o.trim()).filter(Boolean);
+      if (validOpts.length < 2) { setAddError("Mindst 2 svarforslag"); return; }
+      bodyOptions = validOpts;
+    } else if (qType === "scale") {
+      bodyOptions = [scaleLowLabel.trim() || "Slet ikke", scaleHighLabel.trim() || "Fuldstændig"];
+    }
 
     setAddLoading(true);
     setAddError("");
@@ -204,7 +213,7 @@ export default function HostClient({ code }: { code: string }) {
       const res = await fetch(`/api/sessions/${code}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed, options: validOpts, duration_seconds: durationSec, type: qType }),
+        body: JSON.stringify({ prompt: trimmed, options: bodyOptions, duration_seconds: durationSec, type: qType }),
       });
       const data = await res.json();
       if (!res.ok) { setAddError(data.error ?? "Fejl"); return; }
@@ -213,6 +222,8 @@ export default function HostClient({ code }: { code: string }) {
       setOptions(DEFAULT_OPTIONS);
       setDurationSec(null);
       setQType("dilemma");
+      setScaleLowLabel("Slet ikke");
+      setScaleHighLabel("Fuldstændig");
     } catch {
       setAddError("Netværksfejl");
     } finally {
@@ -315,6 +326,8 @@ export default function HostClient({ code }: { code: string }) {
                     <div className={s.qOptions}>
                       {q.type === "wordcloud"
                         ? <span className={`${s.badge} ${s.shut}`} style={{ fontSize: 10 }}>ORDSKY</span>
+                        : q.type === "scale"
+                        ? <span className={`${s.badge} ${s.shut}`} style={{ fontSize: 10 }}>SKALA 1–10</span>
                         : q.options.join(" · ")}
                     </div>
                     {isCurrent && (
@@ -428,14 +441,14 @@ export default function HostClient({ code }: { code: string }) {
               <div>
                 <label className={s.label}>Type</label>
                 <div className={s.stateRow}>
-                  {(["dilemma", "wordcloud"] as const).map((t) => (
+                  {(["dilemma", "scale", "wordcloud"] as const).map((t) => (
                     <button
                       key={t}
                       className={`${s.stateBtn}${qType === t ? ` ${s.on}` : ""}`}
                       onClick={() => setQType(t)}
                       type="button"
                     >
-                      {t === "dilemma" ? "Dilemma" : "Ordsky"}
+                      {t === "dilemma" ? "Dilemma" : t === "scale" ? "Skala" : "Ordsky"}
                     </button>
                   ))}
                 </div>
@@ -451,6 +464,21 @@ export default function HostClient({ code }: { code: string }) {
                   rows={3}
                 />
               </div>
+
+              {qType === "scale" && (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label className={s.label}>Lav ende (1)</label>
+                    <input value={scaleLowLabel} onChange={(e) => setScaleLowLabel(e.target.value)}
+                      placeholder="Slet ikke" className={s.optInput} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className={s.label}>Høj ende (10)</label>
+                    <input value={scaleHighLabel} onChange={(e) => setScaleHighLabel(e.target.value)}
+                      placeholder="Fuldstændig" className={s.optInput} />
+                  </div>
+                </div>
+              )}
 
               {qType === "dilemma" && (
                 <div>
