@@ -314,9 +314,11 @@ function ScaleInputScreen({
 }: {
   question: Question; qNum: number; submitting: boolean; onVote: (idx: number) => void;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [value, setValue] = useState<number | null>(null);
   const lowLabel = question.options[0] ?? "";
   const highLabel = question.options[1] ?? "";
+
+  const pct = value !== null ? ((value - 1) / 9) * 100 : 50;
 
   return (
     <div className={s.screen}>
@@ -330,28 +332,47 @@ function ScaleInputScreen({
         <h1 className={s.qText}>{question.prompt}</h1>
       </div>
       <div className={s.scaleArea}>
-        <div className={s.scaleGrid}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-            <button
-              key={n}
-              className={`${s.scalePick}${selected === n ? ` ${s.scalePickOn}` : ""}`}
-              onClick={() => setSelected(n)}
-              disabled={submitting}
-            >
-              {n}
-            </button>
-          ))}
+        {/* Big number display */}
+        <div className={s.sliderValWrap}>
+          {value !== null ? (
+            <span className={s.sliderVal}>{value}</span>
+          ) : (
+            <span className={s.sliderValPlaceholder}>?</span>
+          )}
+          <span className={s.sliderValOf}>/ 10</span>
         </div>
-        {(lowLabel || highLabel) && (
-          <div className={s.scaleEndLabels}>
-            <span>{lowLabel}</span>
-            <span>{highLabel}</span>
+
+        {/* Range slider */}
+        <div className={s.sliderWrap}>
+          <input
+            type="range"
+            min={1}
+            max={10}
+            step={1}
+            value={value ?? 5}
+            onChange={(e) => setValue(Number(e.target.value))}
+            className={s.slider}
+            disabled={submitting}
+            style={{ "--pct": `${pct}%` } as React.CSSProperties}
+          />
+          {(lowLabel || highLabel) && (
+            <div className={s.scaleEndLabels}>
+              <span>{lowLabel}</span>
+              <span>{highLabel}</span>
+            </div>
+          )}
+          {/* Tick marks 1–10 */}
+          <div className={s.sliderTicks}>
+            {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+              <span key={n} className={`${s.sliderTick}${value === n ? ` ${s.sliderTickOn}` : ""}`}>{n}</span>
+            ))}
           </div>
-        )}
+        </div>
+
         <button
           className={s.scaleSubmit}
-          onClick={() => selected !== null && onVote(selected)}
-          disabled={selected === null || submitting}
+          onClick={() => value !== null && onVote(value)}
+          disabled={value === null || submitting}
         >
           {submitting ? "Sender…" : "Send svar"}
         </button>
