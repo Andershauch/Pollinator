@@ -488,9 +488,9 @@ function LobbyScreen({
 
           <div className={s.joinInfo}>
             <div className={s.joinKicker}>Scan og deltag</div>
+            <div className={s.sessionTitle}>{session.title}</div>
             <div className={s.sessionCode}>{session.code}</div>
             <div className={s.joinUrl}>{joinUrl.replace(/^https?:\/\//, "")}</div>
-            <div className={s.sessionTitle}>{session.title}</div>
           </div>
         </div>
       </div>
