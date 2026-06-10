@@ -12,6 +12,22 @@ type BankQuestion = {
   times_used: number;
 };
 
+type SessionSummary = {
+  id: string;
+  code: string;
+  title: string;
+  created_at: string;
+  question_count: number;
+};
+
+type SessionQuestion = {
+  id: string;
+  prompt: string;
+  type: "dilemma" | "wordcloud" | "scale";
+  options: string[];
+  position: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -121,8 +137,16 @@ export default function HostClient({ code }: { code: string }) {
 
   // Spørgsmålsbank
   const [bankOpen, setBankOpen] = useState(false);
+  const [bankTab, setBankTab] = useState<"questions" | "sessions">("questions");
   const [bank, setBank] = useState<BankQuestion[]>([]);
   const [bankLoading, setBankLoading] = useState(false);
+  // Sessions-tab
+  const [sessionList, setSessionList] = useState<SessionSummary[]>([]);
+  const [sessionListLoading, setSessionListLoading] = useState(false);
+  const [expandedCode, setExpandedCode] = useState<string | null>(null);
+  const [expandedQs, setExpandedQs] = useState<Record<string, SessionQuestion[]>>({});
+  const [expandedLoading, setExpandedLoading] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   /* ── Polling ─────────────────────────────────────────────── */
 
@@ -208,6 +232,7 @@ export default function HostClient({ code }: { code: string }) {
 
   async function openBank() {
     setBankOpen(true);
+    setBankTab("questions");
     if (bank.length > 0) return;
     setBankLoading(true);
     try {
@@ -218,7 +243,12 @@ export default function HostClient({ code }: { code: string }) {
     }
   }
 
-  function applyFromBank(q: BankQuestion) {
+  function switchBankTab(tab: "questions" | "sessions") {
+    setBankTab(tab);
+    if (tab === "sessions") loadSessionList();
+  }
+
+  function applyFromBank(q: BankQuestion | SessionQuestion) {
     setQType(q.type);
     setPrompt(q.prompt);
     if (q.type === "dilemma") {
@@ -228,10 +258,81 @@ export default function HostClient({ code }: { code: string }) {
       setScaleHighLabel(q.options[1] ?? "Fuldstændig");
     }
     setBankOpen(false);
-    // Scroll form into view on mobile
     setTimeout(() => {
       document.getElementById("addForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
+  }
+
+  async function loadSessionList() {
+    if (sessionList.length > 0) return;
+    setSessionListLoading(true);
+    try {
+      const res = await fetch("/api/sessions");
+      if (res.ok) {
+        const data: SessionSummary[] = await res.json();
+        // Filtrer den aktuelle session fra
+        setSessionList(data.filter((s) => s.code !== code.toUpperCase()));
+      }
+    } finally {
+      setSessionListLoading(false);
+    }
+  }
+
+  async function toggleSession(sessionCode: string) {
+    if (expandedCode === sessionCode) {
+      setExpandedCode(null);
+      return;
+    }
+    setExpandedCode(sessionCode);
+    if (expandedQs[sessionCode]) return; // allerede hentet
+    setExpandedLoading(sessionCode);
+    try {
+      const res = await fetch(`/api/sessions/${sessionCode}`);
+      if (res.ok) {
+        const data = await res.json();
+        setExpandedQs((prev) => ({ ...prev, [sessionCode]: data.questions ?? [] }));
+      }
+    } finally {
+      setExpandedLoading(null);
+    }
+  }
+
+  async function importSingleQuestion(q: SessionQuestion) {
+    const bodyOptions = q.type === "dilemma" ? q.options
+      : q.type === "scale" ? q.options.slice(0, 2)
+      : [];
+    await fetch(`/api/sessions/${code}/questions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: q.prompt, options: bodyOptions, type: q.type }),
+    });
+    // Opdater session lokalt (polling vil også fange det)
+  }
+
+  async function importAllFromSession(sessionCode: string) {
+    const qs = expandedQs[sessionCode];
+    if (!qs?.length) return;
+    setImporting(true);
+    try {
+      await Promise.all(qs.map((q) => importSingleQuestion(q)));
+      // Tving en session-genindlæsning
+      const res = await fetch(`/api/sessions/${code}`);
+      if (res.ok) setSession(await res.json());
+      setBankOpen(false);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function importOne(q: SessionQuestion) {
+    setImporting(true);
+    try {
+      await importSingleQuestion(q);
+      const res = await fetch(`/api/sessions/${code}`);
+      if (res.ok) setSession(await res.json());
+    } finally {
+      setImporting(false);
+    }
   }
 
   /* ── Add question ────────────────────────────────────────── */
@@ -651,27 +752,115 @@ export default function HostClient({ code }: { code: string }) {
       {bankOpen && (
         <div className={s.bankOverlay} onClick={() => setBankOpen(false)}>
           <div className={s.bankDrawer} onClick={(e) => e.stopPropagation()}>
+
+            {/* Header */}
             <div className={s.bankHead}>
-              <span className={s.bankTitle}>Spørgsmålsbank</span>
+              <div className={s.bankTabs}>
+                <button
+                  className={`${s.bankTab}${bankTab === "questions" ? ` ${s.bankTabOn}` : ""}`}
+                  onClick={() => switchBankTab("questions")}
+                >
+                  Spørgsmål
+                </button>
+                <button
+                  className={`${s.bankTab}${bankTab === "sessions" ? ` ${s.bankTabOn}` : ""}`}
+                  onClick={() => switchBankTab("sessions")}
+                >
+                  Workshops
+                </button>
+              </div>
               <button className={s.bankClose} onClick={() => setBankOpen(false)}>×</button>
             </div>
-            <div className={s.bankList}>
-              {bankLoading && (
-                <div className={s.bankEmpty}>Henter…</div>
-              )}
-              {!bankLoading && bank.length === 0 && (
-                <div className={s.bankEmpty}>Ingen tidligere spørgsmål endnu.</div>
-              )}
-              {bank.map((q, i) => (
-                <button key={i} className={s.bankItem} onClick={() => applyFromBank(q)}>
-                  <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
-                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : "DILEMMA"}
-                  </span>
-                  <span className={s.bankPrompt}>{q.prompt}</span>
-                  <span className={s.bankUsed}>{q.times_used}×</span>
-                </button>
-              ))}
-            </div>
+
+            {/* ── Tab: individuelle spørgsmål ── */}
+            {bankTab === "questions" && (
+              <div className={s.bankList}>
+                {bankLoading && <div className={s.bankEmpty}>Henter…</div>}
+                {!bankLoading && bank.length === 0 && (
+                  <div className={s.bankEmpty}>Ingen tidligere spørgsmål endnu.</div>
+                )}
+                {bank.map((q, i) => (
+                  <button key={i} className={s.bankItem} onClick={() => applyFromBank(q)}>
+                    <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
+                      {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : "DILEMMA"}
+                    </span>
+                    <span className={s.bankPrompt}>{q.prompt}</span>
+                    <span className={s.bankUsed}>{q.times_used}×</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Tab: workshops ── */}
+            {bankTab === "sessions" && (
+              <div className={s.bankList}>
+                {sessionListLoading && <div className={s.bankEmpty}>Henter workshops…</div>}
+                {!sessionListLoading && sessionList.length === 0 && (
+                  <div className={s.bankEmpty}>Ingen tidligere workshops endnu.</div>
+                )}
+                {sessionList.map((sess) => {
+                  const isOpen = expandedCode === sess.code;
+                  const qs = expandedQs[sess.code];
+                  const isLoading = expandedLoading === sess.code;
+                  return (
+                    <div key={sess.code} className={s.sessItem}>
+                      {/* Session header row */}
+                      <button
+                        className={s.sessRow}
+                        onClick={() => toggleSession(sess.code)}
+                      >
+                        <span className={s.sessChevron}>{isOpen ? "▾" : "▸"}</span>
+                        <span className={s.sessTitle}>{sess.title}</span>
+                        <span className={s.sessMeta}>
+                          {new Date(sess.created_at).toLocaleDateString("da-DK", { day: "numeric", month: "short" })}
+                          {" · "}{sess.question_count} spørgsmål
+                        </span>
+                      </button>
+
+                      {/* Expanded questions */}
+                      {isOpen && (
+                        <div className={s.sessQList}>
+                          {isLoading && <div className={s.sessQLoading}>Henter…</div>}
+                          {!isLoading && qs?.length === 0 && (
+                            <div className={s.sessQLoading}>Ingen spørgsmål i denne session.</div>
+                          )}
+                          {!isLoading && qs && qs.length > 0 && (
+                            <>
+                              <div className={s.sessQActions}>
+                                <button
+                                  className={s.sessAddAll}
+                                  onClick={() => importAllFromSession(sess.code)}
+                                  disabled={importing}
+                                >
+                                  {importing ? "Importerer…" : `Tilføj alle ${qs.length} →`}
+                                </button>
+                              </div>
+                              {[...qs].sort((a, b) => a.position - b.position).map((q) => (
+                                <div key={q.id} className={s.sessQ}>
+                                  <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
+                                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : "DILEMMA"}
+                                  </span>
+                                  <span className={s.bankPrompt}>{q.prompt}</span>
+                                  <button
+                                    className={s.sessAddOne}
+                                    onClick={() => importOne(q)}
+                                    disabled={importing}
+                                    title="Tilføj dette spørgsmål"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
           </div>
         </div>
       )}

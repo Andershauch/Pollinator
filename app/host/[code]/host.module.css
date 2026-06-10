@@ -551,8 +551,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 16px;
+  padding: 16px 20px 0;
   border-bottom: 1px solid var(--line);
+}
+
+/* Tabs inside drawer header */
+.bankTabs {
+  display: flex;
+  gap: 0;
+}
+
+.bankTab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.bankTab:hover { color: var(--muted); }
+
+.bankTabOn {
+  color: var(--fg) !important;
+  border-bottom-color: var(--accent);
 }
 
 .bankTitle {
@@ -652,6 +679,129 @@
   letter-spacing: 0.06em;
   text-align: center;
 }
+
+/* ── Sessions tab ────────────────────────────────────────── */
+
+.sessItem {
+  border-bottom: 1px solid var(--line);
+}
+
+.sessRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sessRow:hover { background: var(--panel); }
+
+.sessChevron {
+  flex: 0 0 auto;
+  font-size: 13px;
+  color: var(--faint);
+  width: 14px;
+}
+
+.sessTitle {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessMeta {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.sessQList {
+  padding: 0 0 8px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: color-mix(in oklch, var(--bg) 50%, var(--panel));
+}
+
+.sessQLoading {
+  padding: 12px 24px 12px 0;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.sessQActions {
+  padding: 10px 20px 8px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sessAddAll {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--c2);
+  background: color-mix(in oklch, var(--c2) 10%, transparent);
+  border: 1px solid color-mix(in oklch, var(--c2) 35%, transparent);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.sessAddAll:hover { background: color-mix(in oklch, var(--c2) 18%, transparent); }
+.sessAddAll:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sessQ {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px 9px 0;
+  border-radius: 8px;
+  transition: background 0.1s;
+}
+
+.sessQ:hover { background: var(--panel); }
+
+.sessAddOne {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--panel);
+  border: 1.5px solid var(--line-2);
+  color: var(--c2);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s;
+  font-family: inherit;
+}
+
+.sessAddOne:hover {
+  background: color-mix(in oklch, var(--c2) 12%, transparent);
+  border-color: var(--c2);
+}
+
+.sessAddOne:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Sticky mobile action bar ────────────────────────────── */
 

@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
+// GET /api/sessions — liste over alle sessioner (til bank-drawer)
+export async function GET() {
+  const rows = await sql`
+    SELECT
+      s.id, s.code, s.title, s.created_at,
+      COUNT(q.id)::int AS question_count
+    FROM sessions s
+    LEFT JOIN questions q ON q.session_id = s.id
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+    LIMIT 100
+  `;
+  return NextResponse.json(rows);
+}
+
 // Uppercase letters only — no I/O to avoid visual confusion
 const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
