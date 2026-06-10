@@ -22,8 +22,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json(rows[0]);
   }
 
-  // Full edit: prompt + options + duration
-  const { prompt, options, duration_seconds } = body;
+  // Full edit: prompt + options + duration + media
+  const { prompt, options, duration_seconds, media_url, media_type } = body;
   if (!prompt?.trim())
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
@@ -31,12 +31,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const dur = typeof duration_seconds === "number" && duration_seconds > 0
     ? duration_seconds
     : null;
+  const mUrl = typeof media_url === "string" && media_url ? media_url : null;
+  const mType = typeof media_type === "string" && media_type ? media_type : null;
 
   const rows = await sql`
     UPDATE questions
     SET prompt           = ${prompt.trim()},
         options          = ${JSON.stringify(safeOptions)},
-        duration_seconds = ${dur}
+        duration_seconds = ${dur},
+        media_url        = ${mUrl},
+        media_type       = ${mType}
     WHERE id = ${id}
     RETURNING *
   `;

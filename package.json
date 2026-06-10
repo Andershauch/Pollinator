@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@vercel/blob": "^2.4.0",
     "canvas-confetti": "^1.9.4",
     "d3-cloud": "^1.2.9",
     "next": "^16.2.7",

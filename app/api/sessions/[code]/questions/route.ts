@@ -6,7 +6,7 @@ type Params = { params: Promise<{ code: string }> };
 // POST /api/sessions/[code]/questions — tilføj spørgsmål
 export async function POST(req: NextRequest, { params }: Params) {
   const { code } = await params;
-  const { prompt, options, position, duration_seconds, type } = await req.json();
+  const { prompt, options, position, duration_seconds, type, media_url, media_type } = await req.json();
 
   const qtype = type === "wordcloud" ? "wordcloud" : type === "scale" ? "scale" : "dilemma";
   const needsOptions = qtype === "dilemma";
@@ -45,9 +45,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Scale: store [lowLabel, highLabel] in options
   const safeOptions = needsOptions ? options : (qtype === "scale" && Array.isArray(options) ? options.slice(0, 2) : []);
 
+  const mUrl = typeof media_url === "string" && media_url ? media_url : null;
+  const mType = typeof media_type === "string" && media_type ? media_type : null;
+
   const rows = await sql`
-    INSERT INTO questions (session_id, prompt, options, position, duration_seconds, type)
-    VALUES (${sessions[0].id as string}, ${prompt.trim()}, ${JSON.stringify(safeOptions)}, ${pos}, ${dur}, ${qtype})
+    INSERT INTO questions (session_id, prompt, options, position, duration_seconds, type, media_url, media_type)
+    VALUES (${sessions[0].id as string}, ${prompt.trim()}, ${JSON.stringify(safeOptions)}, ${pos}, ${dur}, ${qtype}, ${mUrl}, ${mType})
     RETURNING *
   `;
 
