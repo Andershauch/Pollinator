@@ -475,6 +475,76 @@
 
 .addOptBtn:hover { color: var(--muted); }
 
+/* ── Media upload ────────────────────────────────────────── */
+
+.mediaBtn {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border: 1.5px dashed var(--line-2);
+  border-radius: 8px;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  text-align: center;
+}
+
+.mediaBtn:hover:not(:disabled) {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.mediaBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mediaPreview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+}
+
+.mediaThumb {
+  width: 56px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 5px;
+  flex: 0 0 auto;
+}
+
+.mediaFilename {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mediaRemove {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--faint);
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto;
+}
+
+.mediaRemove:hover { color: var(--c4); }
+
 /* ── Error ───────────────────────────────────────────────── */
 
 .error {

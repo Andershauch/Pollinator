@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import s from "./host.module.css";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -37,6 +37,8 @@ type Question = {
   duration_seconds: number | null;
   opened_at: string | null;
   type: "dilemma" | "wordcloud" | "scale";
+  media_url?: string | null;
+  media_type?: string | null;
 };
 
 type Session = {
@@ -134,8 +136,14 @@ export default function HostClient({ code }: { code: string }) {
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaType, setMediaType] = useState<"image" | "video" | "">("");
+  const [mediaUploading, setMediaUploading] = useState(false);
 
   // Inline-redigering
+  const [editMediaUrl, setEditMediaUrl] = useState("");
+  const [editMediaType, setEditMediaType] = useState<"image" | "video" | "">("");
+  const [editMediaUploading, setEditMediaUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editOptions, setEditOptions] = useState<string[]>([]);
@@ -243,6 +251,8 @@ export default function HostClient({ code }: { code: string }) {
     setEditingId(q.id);
     setEditPrompt(q.prompt);
     setEditDuration(q.duration_seconds);
+    setEditMediaUrl(q.media_url ?? "");
+    setEditMediaType((q.media_type as "image" | "video") ?? "");
     if (q.type === "dilemma") {
       setEditOptions(q.options);
     } else if (q.type === "scale") {
@@ -267,7 +277,7 @@ export default function HostClient({ code }: { code: string }) {
       const res = await fetch(`/api/questions/${q.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: editPrompt.trim(), options, duration_seconds: editDuration }),
+        body: JSON.stringify({ prompt: editPrompt.trim(), options, duration_seconds: editDuration, media_url: editMediaUrl || null, media_type: editMediaType || null }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -298,6 +308,25 @@ export default function HostClient({ code }: { code: string }) {
       setLoading(false);
     }
   }
+
+  /* ── Media upload ───────────────────────────────────────── */
+
+  async function uploadFile(file: File, setUrl: (u: string) => void, setType: (t: "image" | "video") => void, setUploading: (b: boolean) => void) {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (res.ok) { setUrl(data.url); setType(data.type); }
+      else setAddError(data.error ?? "Upload fejlede");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Bank ────────────────────────────────────────────────── */
 
@@ -427,7 +456,7 @@ export default function HostClient({ code }: { code: string }) {
       const res = await fetch(`/api/sessions/${code}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed, options: bodyOptions, duration_seconds: durationSec, type: qType }),
+        body: JSON.stringify({ prompt: trimmed, options: bodyOptions, duration_seconds: durationSec, type: qType, media_url: mediaUrl || null, media_type: mediaType || null }),
       });
       const data = await res.json();
       if (!res.ok) { setAddError(data.error ?? "Fejl"); return; }
@@ -438,6 +467,8 @@ export default function HostClient({ code }: { code: string }) {
       setQType("dilemma");
       setScaleLowLabel("Slet ikke");
       setScaleHighLabel("Fuldstændig");
+      setMediaUrl("");
+      setMediaType("");
     } catch {
       setAddError("Netværksfejl");
     } finally {
@@ -582,6 +613,49 @@ export default function HostClient({ code }: { code: string }) {
                           ))}
                         </select>
                       </div>
+                      {/* Media upload i edit-form */}
+                      {q.type !== "wordcloud" && (
+                        <div style={{ marginTop: 10 }}>
+                          <input
+                            ref={editFileInputRef}
+                            type="file"
+                            accept="image/*,video/*"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) uploadFile(f, setEditMediaUrl, setEditMediaType, setEditMediaUploading);
+                              e.target.value = "";
+                            }}
+                          />
+                          {!editMediaUrl && (
+                            <button
+                              type="button"
+                              className={s.mediaBtn}
+                              onClick={() => editFileInputRef.current?.click()}
+                              disabled={editMediaUploading}
+                            >
+                              {editMediaUploading ? "Uploader…" : "＋ Tilføj billede eller video"}
+                            </button>
+                          )}
+                          {editMediaUrl && (
+                            <div className={s.mediaPreview}>
+                              {editMediaType === "image"
+                                ? <img src={editMediaUrl} alt="" className={s.mediaThumb} />
+                                : <span className={s.mediaFilename}>▶ Video uploadet</span>
+                              }
+                              <button
+                                type="button"
+                                className={s.mediaRemove}
+                                onClick={() => { setEditMediaUrl(""); setEditMediaType(""); }}
+                                title="Fjern medie"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className={s.editActions}>
                         <button className={`${s.btn} ${s.btnGhost} ${s.btnSmall}`} onClick={cancelEdit}>Annuller</button>
                         <button className={`${s.btn} ${s.btnAccent} ${s.btnSmall}`} onClick={() => saveEdit(q)} disabled={editSaving || !editPrompt.trim()}>
@@ -823,6 +897,50 @@ export default function HostClient({ code }: { code: string }) {
                   ))}
                 </select>
               </div>
+
+              {/* Media upload — kun for dilemma og scale */}
+              {qType !== "wordcloud" && (
+                <div>
+                  <label className={s.label}>Medie (valgfrit)</label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadFile(f, setMediaUrl, setMediaType, setMediaUploading);
+                      e.target.value = "";
+                    }}
+                  />
+                  {!mediaUrl && (
+                    <button
+                      type="button"
+                      className={s.mediaBtn}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={mediaUploading}
+                    >
+                      {mediaUploading ? "Uploader…" : "＋ Tilføj billede eller video"}
+                    </button>
+                  )}
+                  {mediaUrl && (
+                    <div className={s.mediaPreview}>
+                      {mediaType === "image"
+                        ? <img src={mediaUrl} alt="" className={s.mediaThumb} />
+                        : <span className={s.mediaFilename}>▶ Video uploadet</span>
+                      }
+                      <button
+                        type="button"
+                        className={s.mediaRemove}
+                        onClick={() => { setMediaUrl(""); setMediaType(""); }}
+                        title="Fjern medie"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {addError && <div className={s.error}>{addError}</div>}
 

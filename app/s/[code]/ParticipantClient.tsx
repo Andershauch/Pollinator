@@ -34,6 +34,8 @@ type Question = {
   duration_seconds: number | null;
   opened_at: string | null;
   type: "dilemma" | "wordcloud" | "scale";
+  media_url?: string | null;
+  media_type?: string | null;
 };
 
 type Session = {
@@ -162,6 +164,23 @@ function CheckRing({ sm = false }: { sm?: boolean }) {
   );
 }
 
+/* ── MediaBlock (deltager-visning) ──────────────────────────── */
+
+function MediaBlock({ url, type }: { url: string; type: string }) {
+  if (type === "video") {
+    return (
+      <div className={s.mediaBlock}>
+        <video src={url} autoPlay muted loop playsInline className={s.mediaBlockMedia} />
+      </div>
+    );
+  }
+  return (
+    <div className={s.mediaBlock}>
+      <img src={url} alt="" className={s.mediaBlockMedia} />
+    </div>
+  );
+}
+
 /* ── Screen: lobby / connected ──────────────────────────────── */
 
 function LobbyScreen({ title }: { title: string }) {
@@ -207,6 +226,9 @@ function ActiveScreen({
         </div>
       } />
       <div className={s.qHead}>
+        {question.media_url && question.media_type && (
+          <MediaBlock url={question.media_url} type={question.media_type} />
+        )}
         <h1 className={s.qText}>{question.prompt}</h1>
       </div>
       <div className={s.opts}>
@@ -350,6 +372,9 @@ function ScaleInputScreen({
         </div>
       } />
       <div className={s.qHead}>
+        {question.media_url && question.media_type && (
+          <MediaBlock url={question.media_url} type={question.media_type} />
+        )}
         <h1 className={s.qText}>{question.prompt}</h1>
       </div>
       <div className={s.scaleArea}>

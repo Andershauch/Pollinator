@@ -18,6 +18,8 @@ type Question = {
   duration_seconds: number | null;
   opened_at: string | null;
   type: "dilemma" | "wordcloud" | "scale";
+  media_url?: string | null;
+  media_type?: string | null;
 };
 
 type WordEntry = { word: string; count: number };
@@ -147,6 +149,30 @@ function useCountUpFloat(target: number, decimals = 1) {
   return display;
 }
 
+/* ── MediaBanner ────────────────────────────────────────────── */
+
+function MediaBanner({ url, type }: { url: string; type: string }) {
+  if (type === "video") {
+    return (
+      <div className={s.mediaBanner}>
+        <video
+          src={url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className={s.mediaBannerVideo}
+        />
+      </div>
+    );
+  }
+  return (
+    <div className={s.mediaBanner}>
+      <img src={url} alt="" className={s.mediaBannerImg} />
+    </div>
+  );
+}
+
 /* ── ScaleHistogram ─────────────────────────────────────────── */
 
 function ScaleHistogram({
@@ -250,6 +276,9 @@ function ScaleScreen({
 
       <div className={s.body} style={{ alignItems: "flex-start" }}>
         <div className={s.resultsWrap}>
+          {currentQ?.media_url && currentQ.media_type && (
+            <MediaBanner url={currentQ.media_url} type={currentQ.media_type} />
+          )}
           <h1 className={s.questionText}>{results.prompt}</h1>
 
           <div className={s.scaleLayout}>
@@ -540,6 +569,9 @@ function ResultsScreen({
 
       <div className={s.body} style={{ alignItems: "flex-start" }}>
         <div className={s.resultsWrap}>
+          {currentQ?.media_url && currentQ.media_type && (
+            <MediaBanner url={currentQ.media_url} type={currentQ.media_type} />
+          )}
           <h1 className={s.questionText}>{results.prompt}</h1>
 
           <DilemmaChart items={chartItems} isOpen={currentQ?.is_open ?? false} />
