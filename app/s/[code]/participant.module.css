@@ -260,6 +260,25 @@
   display: block;
 }
 
+.muteBtn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s;
+}
+
+.muteBtn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
 /* ── Active question ─────────────────────────────────────── */
 
 .qHead {

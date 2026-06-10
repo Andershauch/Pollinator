@@ -167,10 +167,23 @@ function CheckRing({ sm = false }: { sm?: boolean }) {
 /* ── MediaBlock (deltager-visning) ──────────────────────────── */
 
 function MediaBlock({ url, type }: { url: string; type: string }) {
+  const [muted, setMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const toggleMute = () => {
+    setMuted((m) => {
+      if (videoRef.current) videoRef.current.muted = !m;
+      return !m;
+    });
+  };
+
   if (type === "video") {
     return (
-      <div className={s.mediaBlock}>
-        <video src={url} autoPlay muted loop playsInline className={s.mediaBlockMedia} />
+      <div className={s.mediaBlock} style={{ position: "relative" }}>
+        <video ref={videoRef} src={url} autoPlay muted loop playsInline className={s.mediaBlockMedia} />
+        <button className={s.muteBtn} onClick={toggleMute} title={muted ? "Slå lyd til" : "Slå lyd fra"}>
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
     );
   }

@@ -152,10 +152,21 @@ function useCountUpFloat(target: number, decimals = 1) {
 /* ── MediaBanner ────────────────────────────────────────────── */
 
 function MediaBanner({ url, type }: { url: string; type: string }) {
+  const [muted, setMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const toggleMute = () => {
+    setMuted((m) => {
+      if (videoRef.current) videoRef.current.muted = !m;
+      return !m;
+    });
+  };
+
   if (type === "video") {
     return (
-      <div className={s.mediaBanner}>
+      <div className={s.mediaBanner} style={{ position: "relative" }}>
         <video
+          ref={videoRef}
           src={url}
           autoPlay
           muted
@@ -163,6 +174,9 @@ function MediaBanner({ url, type }: { url: string; type: string }) {
           playsInline
           className={s.mediaBannerVideo}
         />
+        <button className={s.muteBtn} onClick={toggleMute} title={muted ? "Slå lyd til" : "Slå lyd fra"}>
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
     );
   }
