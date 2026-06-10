@@ -486,6 +486,67 @@
   color: var(--c4);
 }
 
+/* ── Edit / delete icon buttons ─────────────────────────── */
+
+.iconBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  color: var(--faint);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  flex: 0 0 auto;
+}
+
+.iconBtn:hover {
+  color: var(--fg);
+  border-color: var(--line-2);
+  background: var(--panel);
+}
+
+.iconBtnDanger:hover {
+  color: var(--c4);
+  border-color: var(--c4);
+  background: color-mix(in oklch, var(--c4) 8%, transparent);
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Inline edit card ────────────────────────────────────── */
+
+.qCardEditing {
+  border-color: var(--accent) !important;
+  background: color-mix(in oklch, var(--accent) 4%, var(--panel)) !important;
+}
+
+.editTextarea {
+  font-size: 15px !important;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.editOpts {
+  display: flex;
+  flex-direction: column;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
 /* ── Bank trigger button ─────────────────────────────────── */
 
 .commandTitleRow {

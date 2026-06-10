@@ -135,6 +135,15 @@ export default function HostClient({ code }: { code: string }) {
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
+  // Inline-redigering
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editOptions, setEditOptions] = useState<string[]>([]);
+  const [editLowLabel, setEditLowLabel] = useState("");
+  const [editHighLabel, setEditHighLabel] = useState("");
+  const [editDuration, setEditDuration] = useState<number | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
   // Spørgsmålsbank
   const [bankOpen, setBankOpen] = useState(false);
   const [bankTab, setBankTab] = useState<"questions" | "sessions">("questions");
@@ -227,6 +236,68 @@ export default function HostClient({ code }: { code: string }) {
 
   const setSessionState = (state: Session["state"]) =>
     patchSession({ state });
+
+  /* ── Edit / delete ───────────────────────────────────────── */
+
+  function startEdit(q: Question) {
+    setEditingId(q.id);
+    setEditPrompt(q.prompt);
+    setEditDuration(q.duration_seconds);
+    if (q.type === "dilemma") {
+      setEditOptions(q.options);
+    } else if (q.type === "scale") {
+      setEditLowLabel(q.options[0] ?? "");
+      setEditHighLabel(q.options[1] ?? "");
+    }
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(q: Question) {
+    if (!editPrompt.trim()) return;
+    setEditSaving(true);
+    try {
+      const options = q.type === "dilemma"
+        ? editOptions.map((o) => o.trim()).filter(Boolean)
+        : q.type === "scale"
+        ? [editLowLabel.trim() || "Slet ikke", editHighLabel.trim() || "Fuldstændig"]
+        : [];
+      const res = await fetch(`/api/questions/${q.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: editPrompt.trim(), options, duration_seconds: editDuration }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSession((s) =>
+          s ? { ...s, questions: s.questions.map((x) => x.id === q.id ? { ...x, ...updated } : x) } : s
+        );
+        setEditingId(null);
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function deleteQuestion(q: Question) {
+    if (!confirm(`Slet "${q.prompt}"?\n\nAlle svar på spørgsmålet slettes også.`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/questions/${q.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSession((s) =>
+          s ? { ...s, questions: s.questions.filter((x) => x.id !== q.id) } : s
+        );
+        if (session?.current_question_id === q.id) {
+          patchSession({ current_question_id: null });
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   /* ── Bank ────────────────────────────────────────────────── */
 
@@ -460,6 +531,69 @@ export default function HostClient({ code }: { code: string }) {
                 isCurrent && !q.is_open ? s.closedQ : "",
               ].join(" ");
 
+              // ── Inline edit mode ──────────────────────────
+              if (editingId === q.id) {
+                return (
+                  <div key={q.id} className={`${s.qCard} ${s.qCardEditing}`}>
+                    <div className={numClass}>{i + 1}</div>
+                    <div className={s.qBody}>
+                      <textarea
+                        value={editPrompt}
+                        onChange={(e) => setEditPrompt(e.target.value)}
+                        className={`${s.input} ${s.editTextarea}`}
+                        rows={2}
+                        autoFocus
+                      />
+                      {q.type === "dilemma" && (
+                        <div className={s.editOpts}>
+                          {editOptions.map((opt, oi) => (
+                            <div key={oi} className={s.optionRow} style={{ marginTop: 6 }}>
+                              <span className={s.optionDot} style={{ background: OPT_COLORS[oi % OPT_COLORS.length] }} />
+                              <input
+                                value={opt}
+                                onChange={(e) => setEditOptions((prev) => prev.map((o, j) => j === oi ? e.target.value : o))}
+                                className={s.optInput}
+                              />
+                              {editOptions.length > 2 && (
+                                <button className={s.optRemove} onClick={() => setEditOptions((prev) => prev.filter((_, j) => j !== oi))}>×</button>
+                              )}
+                            </div>
+                          ))}
+                          {editOptions.length < MAX_OPTIONS && (
+                            <button className={s.addOptBtn} style={{ marginTop: 6 }} onClick={() => setEditOptions((p) => [...p, ""])}>+ Tilføj option</button>
+                          )}
+                        </div>
+                      )}
+                      {q.type === "scale" && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          <input value={editLowLabel} onChange={(e) => setEditLowLabel(e.target.value)} placeholder="Lav ende (1)" className={s.optInput} style={{ flex: 1 }} />
+                          <input value={editHighLabel} onChange={(e) => setEditHighLabel(e.target.value)} placeholder="Høj ende (10)" className={s.optInput} style={{ flex: 1 }} />
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <select
+                          value={editDuration ?? ""}
+                          onChange={(e) => setEditDuration(e.target.value ? Number(e.target.value) : null)}
+                          className={s.optInput}
+                          style={{ flex: 1 }}
+                        >
+                          {DURATION_OPTIONS.map((opt) => (
+                            <option key={opt.value ?? "none"} value={opt.value ?? ""}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={s.editActions}>
+                        <button className={`${s.btn} ${s.btnGhost} ${s.btnSmall}`} onClick={cancelEdit}>Annuller</button>
+                        <button className={`${s.btn} ${s.btnAccent} ${s.btnSmall}`} onClick={() => saveEdit(q)} disabled={editSaving || !editPrompt.trim()}>
+                          {editSaving ? "Gemmer…" : "Gem ✓"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // ── Normal view ───────────────────────────────
               return (
                 <div key={q.id} className={cardClass}>
                   <div className={numClass}>{i + 1}</div>
@@ -487,6 +621,27 @@ export default function HostClient({ code }: { code: string }) {
                   </div>
 
                   <div className={s.qActions}>
+                    {/* Rediger / slet — kun når spørgsmålet ikke er aktivt åbent */}
+                    {!q.is_open && (
+                      <>
+                        <button
+                          className={`${s.iconBtn}`}
+                          onClick={() => startEdit(q)}
+                          title="Rediger"
+                          disabled={loading}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          className={`${s.iconBtn} ${s.iconBtnDanger}`}
+                          onClick={() => deleteQuestion(q)}
+                          title="Slet"
+                          disabled={loading}
+                        >
+                          ✕
+                        </button>
+                      </>
+                    )}
                     {!isCurrent && (
                       <button
                         className={`${s.btn} ${s.btnGhost} ${s.btnSmall}`}
