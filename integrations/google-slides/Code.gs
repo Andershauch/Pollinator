@@ -124,10 +124,13 @@ function insertJoinSlide(code, sessionTitle) {
   // URL
   _addText(slide, joinUrl.replace("https://", ""), 260, 268, 420, 32, 13, false, "#8888aa");
 
-  // QR-kode billede
+  // QR-kode billede — hent som blob så insertImage virker
   try {
-    slide.insertImage(qrUrl, 30, 60, 210, 210);
-  } catch (e) {}
+    const qrBlob = UrlFetchApp.fetch(qrUrl).getBlob().setName("qr.png");
+    slide.insertImage(qrBlob, 30, 60, 210, 210);
+  } catch (e) {
+    Logger.log("QR insert fejl: " + e);
+  }
 
   return "ok";
 }
