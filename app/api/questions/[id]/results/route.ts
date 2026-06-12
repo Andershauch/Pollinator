@@ -8,7 +8,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
 
   const questions = await sql`
-    SELECT id, prompt, options, type FROM questions WHERE id = ${id}
+    SELECT id, prompt, options, type, COALESCE(scale_max, 10) AS scale_max FROM questions WHERE id = ${id}
   `;
   if (questions.length === 0) {
     return NextResponse.json({ error: "question not found" }, { status: 404 });
@@ -26,8 +26,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
   `;
 
   if (qtype === "scale") {
-    // Always return all 10 values (1–10), fill missing with 0
-    const tally = Array.from({ length: 10 }, (_, i) => {
+    const scaleMax = (q.scale_max as number) ?? 10;
+    const tally = Array.from({ length: scaleMax }, (_, i) => {
       const val = i + 1;
       const votes = (counts as { option_index: number; votes: number }[])
         .find((r) => r.option_index === val)?.votes ?? 0;
@@ -45,6 +45,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       tally,
       total,
       average,
+      scaleMax,
       lowLabel: options[0] ?? "",
       highLabel: options[1] ?? "",
     });

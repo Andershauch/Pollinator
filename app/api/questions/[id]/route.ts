@@ -22,8 +22,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json(rows[0]);
   }
 
-  // Full edit: prompt + options + duration + media
-  const { prompt, options, duration_seconds, media_url, media_type } = body;
+  // Full edit: prompt + options + duration + media + scale_max
+  const { prompt, options, duration_seconds, media_url, media_type, scale_max, type } = body;
   if (!prompt?.trim())
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
@@ -33,6 +33,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     : null;
   const mUrl = typeof media_url === "string" && media_url ? media_url : null;
   const mType = typeof media_type === "string" && media_type ? media_type : null;
+  const sMax = type === "scale" && typeof scale_max === "number" && scale_max >= 2
+    ? scale_max
+    : null;
 
   const rows = await sql`
     UPDATE questions
@@ -40,7 +43,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         options          = ${JSON.stringify(safeOptions)},
         duration_seconds = ${dur},
         media_url        = ${mUrl},
-        media_type       = ${mType}
+        media_type       = ${mType},
+        scale_max        = COALESCE(${sMax}, scale_max)
     WHERE id = ${id}
     RETURNING *
   `;

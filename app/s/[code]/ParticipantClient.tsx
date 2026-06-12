@@ -34,6 +34,7 @@ type Question = {
   duration_seconds: number | null;
   opened_at: string | null;
   type: "dilemma" | "wordcloud" | "scale";
+  scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
 };
@@ -370,11 +371,14 @@ function ScaleInputScreen({
 }: {
   question: Question; qNum: number; submitting: boolean; onVote: (idx: number) => void;
 }) {
+  const scaleMax = question.scale_max ?? 10;
   const [value, setValue] = useState<number | null>(null);
   const lowLabel = question.options[0] ?? "";
   const highLabel = question.options[1] ?? "";
 
-  const pct = value !== null ? ((value - 1) / 9) * 100 : 50;
+  const pct = value !== null ? ((value - 1) / (scaleMax - 1)) * 100 : 50;
+  const showTicks = scaleMax <= 20;
+  const tickStep = scaleMax <= 10 ? 1 : scaleMax <= 20 ? 2 : scaleMax <= 50 ? 10 : 20;
 
   return (
     <div className={s.screen}>
@@ -398,7 +402,7 @@ function ScaleInputScreen({
           ) : (
             <span className={s.sliderValPlaceholder}>?</span>
           )}
-          <span className={s.sliderValOf}>/ 10</span>
+          <span className={s.sliderValOf}>/ {scaleMax}</span>
         </div>
 
         {/* Range slider */}
@@ -406,9 +410,9 @@ function ScaleInputScreen({
           <input
             type="range"
             min={1}
-            max={10}
+            max={scaleMax}
             step={1}
-            value={value ?? 5}
+            value={value ?? Math.round(scaleMax / 2)}
             onChange={(e) => setValue(Number(e.target.value))}
             className={s.slider}
             disabled={submitting}
@@ -420,12 +424,15 @@ function ScaleInputScreen({
               <span>{highLabel}</span>
             </div>
           )}
-          {/* Tick marks 1–10 */}
-          <div className={s.sliderTicks}>
-            {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-              <span key={n} className={`${s.sliderTick}${value === n ? ` ${s.sliderTickOn}` : ""}`}>{n}</span>
-            ))}
-          </div>
+          {showTicks && (
+            <div className={s.sliderTicks}>
+              {Array.from({ length: scaleMax }, (_, i) => i + 1)
+                .filter((n) => n % tickStep === 0 || n === 1 || n === scaleMax)
+                .map((n) => (
+                  <span key={n} className={`${s.sliderTick}${value === n ? ` ${s.sliderTickOn}` : ""}`}>{n}</span>
+                ))}
+            </div>
+          )}
         </div>
 
         <button

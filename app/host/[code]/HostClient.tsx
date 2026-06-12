@@ -37,6 +37,7 @@ type Question = {
   duration_seconds: number | null;
   opened_at: string | null;
   type: "dilemma" | "wordcloud" | "scale";
+  scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
 };
@@ -60,7 +61,8 @@ const OPT_COLORS = [
 ];
 
 const DEFAULT_OPTIONS = ["Enig", "Uenig", "Ved ikke"];
-const MAX_OPTIONS = 5;
+const MAX_OPTIONS = 8;
+const SCALE_MAX_OPTIONS = [5, 10, 20, 50, 100];
 
 const DURATION_OPTIONS = [
   { label: "Ingen timer", value: null },
@@ -131,6 +133,7 @@ export default function HostClient({ code }: { code: string }) {
   const [qType, setQType] = useState<"dilemma" | "wordcloud" | "scale">("dilemma");
   const [scaleLowLabel, setScaleLowLabel] = useState("Slet ikke");
   const [scaleHighLabel, setScaleHighLabel] = useState("Fuldstændig");
+  const [scaleMax, setScaleMax] = useState(10);
   const [prompt, setPrompt] = useState("");
   const [options, setOptions] = useState(DEFAULT_OPTIONS);
   const [durationSec, setDurationSec] = useState<number | null>(null);
@@ -149,6 +152,7 @@ export default function HostClient({ code }: { code: string }) {
   const [editOptions, setEditOptions] = useState<string[]>([]);
   const [editLowLabel, setEditLowLabel] = useState("");
   const [editHighLabel, setEditHighLabel] = useState("");
+  const [editScaleMax, setEditScaleMax] = useState(10);
   const [editDuration, setEditDuration] = useState<number | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
@@ -258,6 +262,7 @@ export default function HostClient({ code }: { code: string }) {
     } else if (q.type === "scale") {
       setEditLowLabel(q.options[0] ?? "");
       setEditHighLabel(q.options[1] ?? "");
+      setEditScaleMax(q.scale_max ?? 10);
     }
   }
 
@@ -272,12 +277,20 @@ export default function HostClient({ code }: { code: string }) {
       const options = q.type === "dilemma"
         ? editOptions.map((o) => o.trim()).filter(Boolean)
         : q.type === "scale"
-        ? [editLowLabel.trim() || "Slet ikke", editHighLabel.trim() || "Fuldstændig"]
+        ? [editLowLabel.trim(), editHighLabel.trim()]
         : [];
       const res = await fetch(`/api/questions/${q.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: editPrompt.trim(), options, duration_seconds: editDuration, media_url: editMediaUrl || null, media_type: editMediaType || null }),
+        body: JSON.stringify({
+          prompt: editPrompt.trim(),
+          options,
+          duration_seconds: editDuration,
+          media_url: editMediaUrl || null,
+          media_type: editMediaType || null,
+          type: q.type,
+          scale_max: q.type === "scale" ? editScaleMax : undefined,
+        }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -447,7 +460,7 @@ export default function HostClient({ code }: { code: string }) {
       if (validOpts.length < 2) { setAddError("Mindst 2 svarforslag"); return; }
       bodyOptions = validOpts;
     } else if (qType === "scale") {
-      bodyOptions = [scaleLowLabel.trim() || "Slet ikke", scaleHighLabel.trim() || "Fuldstændig"];
+      bodyOptions = [scaleLowLabel.trim(), scaleHighLabel.trim()];
     }
 
     setAddLoading(true);
@@ -456,7 +469,15 @@ export default function HostClient({ code }: { code: string }) {
       const res = await fetch(`/api/sessions/${code}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed, options: bodyOptions, duration_seconds: durationSec, type: qType, media_url: mediaUrl || null, media_type: mediaType || null }),
+        body: JSON.stringify({
+          prompt: trimmed,
+          options: bodyOptions,
+          duration_seconds: durationSec,
+          type: qType,
+          scale_max: qType === "scale" ? scaleMax : undefined,
+          media_url: mediaUrl || null,
+          media_type: mediaType || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setAddError(data.error ?? "Fejl"); return; }
@@ -467,6 +488,7 @@ export default function HostClient({ code }: { code: string }) {
       setQType("dilemma");
       setScaleLowLabel("Slet ikke");
       setScaleHighLabel("Fuldstændig");
+      setScaleMax(10);
       setMediaUrl("");
       setMediaType("");
     } catch {
@@ -596,9 +618,24 @@ export default function HostClient({ code }: { code: string }) {
                         </div>
                       )}
                       {q.type === "scale" && (
-                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                          <input value={editLowLabel} onChange={(e) => setEditLowLabel(e.target.value)} placeholder="Lav ende (1)" className={s.optInput} style={{ flex: 1 }} />
-                          <input value={editHighLabel} onChange={(e) => setEditHighLabel(e.target.value)} placeholder="Høj ende (10)" className={s.optInput} style={{ flex: 1 }} />
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                            <span className={s.label} style={{ alignSelf: "center", marginBottom: 0 }}>Trin:</span>
+                            {SCALE_MAX_OPTIONS.map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                className={`${s.typeBtn} ${editScaleMax === v ? s.typeBtnActive : ""}`}
+                                onClick={() => setEditScaleMax(v)}
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input value={editLowLabel} onChange={(e) => setEditLowLabel(e.target.value)} placeholder="Label lav (1)" className={s.optInput} style={{ flex: 1 }} />
+                            <input value={editHighLabel} onChange={(e) => setEditHighLabel(e.target.value)} placeholder={`Label høj (${editScaleMax})`} className={s.optInput} style={{ flex: 1 }} />
+                          </div>
                         </div>
                       )}
                       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -843,18 +880,35 @@ export default function HostClient({ code }: { code: string }) {
               </div>
 
               {qType === "scale" && (
-                <div style={{ display: "flex", gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <label className={s.label}>Lav ende (1)</label>
-                    <input value={scaleLowLabel} onChange={(e) => setScaleLowLabel(e.target.value)}
-                      placeholder="Slet ikke" className={s.optInput} />
+                <>
+                  <div>
+                    <label className={s.label}>Trin (max)</label>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {SCALE_MAX_OPTIONS.map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className={`${s.typeBtn} ${scaleMax === v ? s.typeBtnActive : ""}`}
+                          onClick={() => setScaleMax(v)}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label className={s.label}>Høj ende (10)</label>
-                    <input value={scaleHighLabel} onChange={(e) => setScaleHighLabel(e.target.value)}
-                      placeholder="Fuldstændig" className={s.optInput} />
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <label className={s.label}>Label lav ende (1)</label>
+                      <input value={scaleLowLabel} onChange={(e) => setScaleLowLabel(e.target.value)}
+                        placeholder="f.eks. Slet ikke" className={s.optInput} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className={s.label}>Label høj ende ({scaleMax})</label>
+                      <input value={scaleHighLabel} onChange={(e) => setScaleHighLabel(e.target.value)}
+                        placeholder="f.eks. Fuldstændig" className={s.optInput} />
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {qType === "dilemma" && (

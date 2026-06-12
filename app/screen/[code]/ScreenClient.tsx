@@ -18,6 +18,7 @@ type Question = {
   duration_seconds: number | null;
   opened_at: string | null;
   type: "dilemma" | "wordcloud" | "scale";
+  scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
 };
@@ -82,6 +83,7 @@ type Results = {
   tally: TallyItem[];
   total: number;
   average?: number;
+  scaleMax?: number;
   lowLabel?: string;
   highLabel?: string;
 };
@@ -189,6 +191,22 @@ function MediaBanner({ url, type }: { url: string; type: string }) {
 
 /* ── ScaleHistogram ─────────────────────────────────────────── */
 
+function bucketTally(tally: TallyItem[], buckets: number): TallyItem[] {
+  const min = tally[0]?.index ?? 1;
+  const max = tally[tally.length - 1]?.index ?? 10;
+  const range = max - min + 1;
+  const size = Math.ceil(range / buckets);
+  const result: TallyItem[] = [];
+  for (let i = 0; i < buckets; i++) {
+    const lo = min + i * size;
+    const hi = Math.min(max, lo + size - 1);
+    if (lo > max) break;
+    const votes = tally.filter((t) => t.index >= lo && t.index <= hi).reduce((s, t) => s + t.votes, 0);
+    result.push({ index: Math.round((lo + hi) / 2), label: lo === hi ? String(lo) : `${lo}–${hi}`, votes });
+  }
+  return result;
+}
+
 function ScaleHistogram({
   tally,
   isOpen,
@@ -214,11 +232,12 @@ function ScaleHistogram({
     prevIsOpen.current = isOpen;
   }, [isOpen]);
 
-  const maxVotes = Math.max(...tally.map((t) => t.votes), 1);
+  const displayTally = tally.length > 20 ? bucketTally(tally, 10) : tally;
+  const maxVotes = Math.max(...displayTally.map((t) => t.votes), 1);
 
   return (
     <div className={s.scaleHistogram}>
-      {tally.map((item, i) => {
+      {displayTally.map((item, i) => {
         const heightPct = shown ? (item.votes / maxVotes) * 100 : 0;
         const delay = shown ? i * 45 : 0;
         return (
@@ -237,7 +256,7 @@ function ScaleHistogram({
                 className={s.scaleBarFill}
                 style={{
                   height: `${heightPct}%`,
-                  background: COLORS[Math.floor((item.index - 1) / 2.5) % COLORS.length],
+                  background: COLORS[Math.floor(i / Math.max(displayTally.length / 4, 1)) % COLORS.length],
                   transitionProperty: "height",
                   transitionDuration: shown ? "0.6s" : "0s",
                   transitionDelay: `${delay}ms`,
@@ -245,7 +264,7 @@ function ScaleHistogram({
                 }}
               />
             </div>
-            <div className={s.scaleValLabel}>{item.index}</div>
+            <div className={s.scaleValLabel}>{item.label ?? item.index}</div>
           </div>
         );
       })}
@@ -300,11 +319,11 @@ function ScaleScreen({
             <div className={s.scaleAvgPanel}>
               <div className={s.scaleAvgLabel}>GENNEMSNIT</div>
               <div className={s.scaleAvgNum}>{displayAvg.toFixed(1)}</div>
-              <div className={s.scaleAvgSub}>ud af 10</div>
+              <div className={s.scaleAvgSub}>ud af {results.scaleMax ?? 10}</div>
               {(results.lowLabel || results.highLabel) && (
                 <div className={s.scaleEndLabelsScreen}>
                   {results.lowLabel && <div className={s.scaleEndItem}><span className={s.scaleEndVal}>1</span>{results.lowLabel}</div>}
-                  {results.highLabel && <div className={s.scaleEndItem}><span className={s.scaleEndVal}>10</span>{results.highLabel}</div>}
+                  {results.highLabel && <div className={s.scaleEndItem}><span className={s.scaleEndVal}>{results.scaleMax ?? 10}</span>{results.highLabel}</div>}
                 </div>
               )}
             </div>
