@@ -84,6 +84,7 @@ function getSlideQuestions() {
 
     const optRaw = lines[1] || "";
     let options = [];
+    let scaleMax = 10;
     if (type === "dilemma") {
       options = optRaw
         ? optRaw.split(",").map(o => o.trim()).filter(Boolean)
@@ -91,10 +92,13 @@ function getSlideQuestions() {
       if (options.length < 2) options = ["Enig", "Uenig", "Ved ikke"];
     } else if (type === "scale") {
       const parts = optRaw.split(",").map(o => o.trim());
-      options = [parts[0] || "Slet ikke", parts[1] || "Fuldstændig"];
+      options = [parts[0] || "", parts[1] || ""];
+      // Linje 3 (valgfri): antal trin, f.eks. "20" eller "100"
+      const maxRaw = parseInt(lines[2] || "", 10);
+      if (!isNaN(maxRaw) && maxRaw >= 2) scaleMax = maxRaw;
     }
 
-    questions.push({ prompt, type, options });
+    questions.push({ prompt, type, options, scaleMax });
   }
 
   return questions;

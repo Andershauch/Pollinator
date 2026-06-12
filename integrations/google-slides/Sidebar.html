@@ -276,6 +276,7 @@
       for (const q of localQs) {
         await api("POST", `/api/sessions/${s.code}/questions`, {
           prompt: q.prompt, options: q.options, type: q.type,
+          ...(q.type === "scale" && q.scaleMax ? { scale_max: q.scaleMax } : {}),
         });
       }
 
