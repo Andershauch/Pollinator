@@ -21,8 +21,16 @@ export async function POST(req: NextRequest) {
     // Client upload: generate a signed token for direct browser → Vercel Blob upload
     if (body?.type === "blob.generate-client-token") {
       const pathname = (body?.payload?.pathname as string) || "upload";
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+      if (!blobToken) {
+        return NextResponse.json(
+          { error: "BLOB_READ_WRITE_TOKEN er ikke konfigureret i Vercel-projektet" },
+          { status: 500, headers: CORS }
+        );
+      }
       try {
         const clientToken = await generateClientTokenFromReadWriteToken({
+          token: blobToken,
           pathname,
           maximumSizeInBytes: 200 * 1024 * 1024, // 200 MB
           allowedContentTypes: ["image/*", "video/*"],
