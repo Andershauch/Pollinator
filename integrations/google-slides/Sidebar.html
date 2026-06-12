@@ -48,6 +48,7 @@
     .btn:active:not(:disabled) { opacity: 0.8; }
 
     .btn-amber  { background: #f59e0b; color: #111; }
+    .btn-outline { background: #fff; color: #555; border-color: #ddd; font-size: 12px; }
     .btn-green  { background: #34d399; color: #0d1a0f; }
     .btn-danger { background: transparent; color: #f43f5e; border-color: #f43f5e; }
 
@@ -192,6 +193,9 @@
   <div class="section">
     <label class="lbl">Spørgsmål</label>
     <div id="lobby-qs" class="q-list"></div>
+    <div class="gap"></div>
+    <button class="btn btn-outline" id="sync-btn-lobby" onclick="syncQuestions('lobby')">↺ Synkroniser slides</button>
+    <div id="sync-msg-lobby"></div>
   </div>
 </div>
 
@@ -213,6 +217,9 @@
   <div class="section">
     <label class="lbl">Spørgsmål</label>
     <div id="a-qlist" class="q-list"></div>
+    <div class="gap"></div>
+    <button class="btn btn-outline" id="sync-btn-active" onclick="syncQuestions('active')">↺ Synkroniser slides</button>
+    <div id="sync-msg-active"></div>
   </div>
 </div>
 
@@ -290,6 +297,48 @@
     } catch (e) {
       showErr("idle-err", e.message);
       enableBtn("create-btn", "Opret session →");
+    }
+  }
+
+  // ── Sync slides → session ─────────────────────────────
+
+  async function syncQuestions(ctx) {
+    const btn = document.getElementById(`sync-btn-${ctx}`);
+    const msg = document.getElementById(`sync-msg-${ctx}`);
+    btn.disabled = true;
+    btn.textContent = "Henter…";
+    msg.innerHTML = "";
+    try {
+      const slideQs = await gsRun("getSlideQuestions");
+      const current = await api("GET", `/api/sessions/${session.code}`);
+      const existing = current.questions || [];
+
+      let added = 0;
+      for (const q of slideQs) {
+        const dup = existing.some(e => e.prompt === q.prompt && e.type === q.type);
+        if (dup) continue;
+        const newQ = await api("POST", `/api/sessions/${session.code}/questions`, {
+          prompt: q.prompt, options: q.options, type: q.type,
+          ...(q.type === "scale" && q.scaleMax ? { scale_max: q.scaleMax } : {}),
+        });
+        existing.push(newQ);
+        added++;
+      }
+
+      session = await api("GET", `/api/sessions/${session.code}`);
+      sortedQs = [...session.questions].sort((a, b) => a.position - b.position);
+
+      const listEl = document.getElementById(ctx === "lobby" ? "lobby-qs" : "a-qlist");
+      listEl.innerHTML = sortedQs.map((q, i) => qItem(i + 1, q.prompt, q.type, "", "")).join("");
+
+      msg.innerHTML = added > 0
+        ? `<div class="ok-msg">${added} nyt spørgsmål tilføjet</div>`
+        : `<div class="hint">Ingen nye spørgsmål fundet</div>`;
+    } catch (e) {
+      msg.innerHTML = `<div class="err">${e.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "↺ Synkroniser slides";
     }
   }
 
