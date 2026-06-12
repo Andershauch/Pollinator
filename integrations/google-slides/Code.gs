@@ -50,23 +50,35 @@ function getSlideQuestions() {
     // Fallback: første tekstbox med indhold
     if (!prompt) {
       for (const shape of slide.getShapes()) {
-        const txt = shape.getText().asString().trim();
-        if (txt) { prompt = txt; break; }
+        try {
+          const txt = shape.getText().asString().trim();
+          if (txt) { prompt = txt; break; }
+        } catch(e) {}
       }
     }
     if (!prompt) continue;
 
-    // Hent speaker notes
+    // Hent speaker notes — robust: leder i alle shapes på notes-siden
+    // og finder den der indeholder et gyldigt type-nøgleord
     let notes = "";
-    const notesPage = slide.getNotesPage();
-    for (const shape of notesPage.getShapes()) {
-      if (shape.getPlaceholderType() === SlidesApp.PlaceholderType.BODY) {
-        notes = shape.getText().asString().trim();
-        break;
-      }
-    }
+    try {
+      const notesPage = slide.getNotesPage();
+      const allTexts = notesPage.getShapes().map(shape => {
+        try { return shape.getText().asString().trim(); } catch(e) { return ""; }
+      }).filter(t => t.length > 0);
 
-    const lines = notes.split("\n").map(l => l.trim()).filter(Boolean);
+      // Prioriter: find den shape hvis første linje er et typeord
+      for (const txt of allTexts) {
+        const firstLine = txt.split(/[\r\n]+/)[0].trim().toLowerCase();
+        if (typeMap[firstLine]) { notes = txt; break; }
+      }
+      // Fallback: tag den længste tekst (typisk den rigtige notes-box)
+      if (!notes) {
+        notes = allTexts.reduce((a, b) => b.length > a.length ? b : a, "");
+      }
+    } catch(e) {}
+
+    const lines = notes.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
     const type = typeMap[lines[0]?.toLowerCase() || ""];
     if (!type) continue; // Ingen gyldig type → spring over
 
@@ -86,6 +98,35 @@ function getSlideQuestions() {
   }
 
   return questions;
+}
+
+// Køres manuelt fra Apps Script-editoren for at se hvad der læses fra slides
+function debugSlides() {
+  const presentation = SlidesApp.getActivePresentation();
+  const slides = presentation.getSlides();
+  const log = [];
+
+  slides.forEach((slide, i) => {
+    const shapes = slide.getShapes();
+    const slideTexts = shapes.map(s => {
+      try { return `[${s.getPlaceholderType()}] "${s.getText().asString().trim()}"`; } catch(e) { return ""; }
+    }).filter(Boolean);
+
+    let notesTexts = [];
+    try {
+      notesTexts = slide.getNotesPage().getShapes().map(s => {
+        try { return `[${s.getPlaceholderType()}] "${s.getText().asString().trim()}"`; } catch(e) { return ""; }
+      }).filter(Boolean);
+    } catch(e) {}
+
+    log.push(`\n--- Slide ${i+1} ---`);
+    log.push("Slide shapes: " + (slideTexts.join(" | ") || "(ingen)"));
+    log.push("Notes shapes: " + (notesTexts.join(" | ") || "(ingen)"));
+  });
+
+  Logger.log(log.join("\n"));
+  SpreadsheetApp.getUi && SpreadsheetApp.getUi().alert(log.join("\n"));
+  SlidesApp.getUi().alert(log.join("\n"));
 }
 
 // Tilføjer en resultatslide for hvert spørgsmål til sidst i præsentationen
