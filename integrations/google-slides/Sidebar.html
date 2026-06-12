@@ -49,6 +49,29 @@
 
     .btn-amber  { background: #f59e0b; color: #111; }
     .btn-outline { background: #fff; color: #555; border-color: #ddd; font-size: 12px; }
+
+    .edit-q-btn {
+      margin-left: auto; flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      color: #bbb; font-size: 12px; padding: 2px 4px; border-radius: 4px;
+      transition: color 0.1s;
+    }
+    .edit-q-btn:hover { color: #f59e0b; }
+    .q-edit-input {
+      flex: 1; min-width: 0; padding: 4px 7px;
+      border: 1.5px solid #f59e0b; border-radius: 5px;
+      font-size: 12px; font-family: inherit; outline: none;
+    }
+    .edit-save-btn {
+      flex-shrink: 0; padding: 4px 8px;
+      background: #f59e0b; color: #111; border: none;
+      border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .edit-cancel-btn {
+      flex-shrink: 0; padding: 4px 6px;
+      background: none; color: #aaa; border: 1px solid #ddd;
+      border-radius: 5px; font-size: 11px; cursor: pointer;
+    }
     .btn-green  { background: #34d399; color: #0d1a0f; }
     .btn-danger { background: transparent; color: #f43f5e; border-color: #f43f5e; }
 
@@ -328,8 +351,7 @@
       session = await api("GET", `/api/sessions/${session.code}`);
       sortedQs = [...session.questions].sort((a, b) => a.position - b.position);
 
-      const listEl = document.getElementById(ctx === "lobby" ? "lobby-qs" : "a-qlist");
-      listEl.innerHTML = sortedQs.map((q, i) => qItem(i + 1, q.prompt, q.type, "", "")).join("");
+      renderQList();
 
       msg.innerHTML = added > 0
         ? `<div class="ok-msg">${added} nyt spørgsmål tilføjet</div>`
@@ -351,8 +373,7 @@
     document.getElementById("lobby-url").textContent = `${BASE}/s/${session.code}`;
     document.getElementById("screen-link").href = screenUrl;
     document.getElementById("screen-link-active").href = screenUrl;
-    document.getElementById("lobby-qs").innerHTML =
-      sortedQs.map((q, i) => qItem(i + 1, q.prompt, q.type, "", "")).join("");
+    renderQList();
   }
 
   // ── Active ────────────────────────────────────────────
@@ -442,7 +463,7 @@
         const cls    = i === curIdx ? "is-active" : i < curIdx ? "is-done" : "";
         const numCls = i === curIdx ? "on" : i < curIdx ? "done" : "";
         const numTxt = i < curIdx ? "✓" : String(i + 1);
-        return qItem(numTxt, q.prompt, q.type, cls, numCls);
+        return qItemEditable(q, i, cls, numCls, numTxt);
       }).join("");
   }
 
@@ -564,6 +585,64 @@
       <div class="q-text">${prompt}</div>
       <span class="badge badge-${type}">${names[type] || type.toUpperCase()}</span>
     </div>`;
+  }
+
+  // Spørgsmålsrække med inline-redigering (lobby + active)
+  function qItemEditable(q, i, itemCls, numCls, numTxt) {
+    const names = { dilemma: "DILEMMA", scale: "SKALA", wordcloud: "ORDSKY" };
+    const num = numTxt ?? String(i + 1);
+    return `<div class="q-item ${itemCls || ''}" id="qrow-${q.id}">
+      <div class="q-num ${numCls || ''}">${num}</div>
+      <div class="q-text">${q.prompt}</div>
+      <span class="badge badge-${q.type}">${names[q.type] || q.type.toUpperCase()}</span>
+      <button class="edit-q-btn" onclick="startEditQ('${q.id}')" title="Ret overskrift">✏</button>
+    </div>`;
+  }
+
+  function startEditQ(qId) {
+    const q = sortedQs.find(q => q.id === qId);
+    if (!q) return;
+    const row = document.getElementById(`qrow-${qId}`);
+    row.innerHTML = `
+      <input id="qinput-${qId}" class="q-edit-input" value="${q.prompt.replace(/"/g, '&quot;')}" />
+      <button class="edit-save-btn" onclick="saveEditQ('${qId}')">Gem</button>
+      <button class="edit-cancel-btn" onclick="cancelEditQ('${qId}')">✕</button>`;
+    const inp = document.getElementById(`qinput-${qId}`);
+    inp.focus();
+    inp.select();
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") saveEditQ(qId);
+      if (e.key === "Escape") cancelEditQ(qId);
+    });
+  }
+
+  async function saveEditQ(qId) {
+    const q = sortedQs.find(q => q.id === qId);
+    const inp = document.getElementById(`qinput-${qId}`);
+    if (!q || !inp) return;
+    const newPrompt = inp.value.trim();
+    if (!newPrompt) return;
+    inp.disabled = true;
+    try {
+      await api("PATCH", `/api/questions/${qId}`, {
+        prompt: newPrompt,
+        options: q.options,
+        type: q.type,
+        ...(q.type === "scale" ? { scale_max: q.scale_max ?? 10 } : {}),
+      });
+      q.prompt = newPrompt;
+    } catch(e) { alert("Fejl: " + e.message); }
+    renderQList();
+  }
+
+  function cancelEditQ(qId) {
+    renderQList();
+  }
+
+  function renderQList() {
+    const lobby = document.getElementById("lobby-qs");
+    if (lobby) lobby.innerHTML = sortedQs.map((q, i) => qItemEditable(q, i)).join("");
+    renderActiveQList();
   }
 
   function show(id) {
