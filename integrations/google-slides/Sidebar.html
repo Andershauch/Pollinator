@@ -332,19 +332,23 @@
         const { clientToken } = await tokenRes.json();
         if (!clientToken) throw new Error("Ingen client token");
 
-        // Step 2: PUT directly to Vercel Blob CDN — ingen 4.5 MB serverless-grænse
+        // Step 2: PUT directly to Vercel Blob API — ingen 4.5 MB serverless-grænse
+        const params = new URLSearchParams({ pathname: file.name });
         const uploadRes = await fetch(
-          "https://blob.vercel-storage.com/" + encodeURIComponent(file.name),
+          "https://vercel.com/api/blob/?" + params.toString(),
           {
             method: "PUT",
             headers: {
               "Authorization": "Bearer " + clientToken,
+              "x-api-version": "12",
+              "x-vercel-blob-access": "public",
               "x-content-type": file.type,
             },
             body: file,
           }
         );
-        const { url } = await uploadRes.json();
+        const blobJson = await uploadRes.json();
+        const url = blobJson.url;
         if (!url) throw new Error("Ingen URL fra Vercel Blob");
 
         // Step 3: gem på spørgsmålet
