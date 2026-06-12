@@ -124,12 +124,28 @@ function insertJoinSlide(code, sessionTitle) {
   // URL
   _addText(slide, joinUrl.replace("https://", ""), 260, 268, 420, 32, 13, false, "#8888aa");
 
-  // QR-kode billede — hent som blob så insertImage virker
-  try {
-    const qrBlob = UrlFetchApp.fetch(qrUrl).getBlob().setName("qr.png");
-    slide.insertImage(qrBlob, 30, 60, 210, 210);
-  } catch (e) {
-    Logger.log("QR insert fejl: " + e);
+  // QR-kode billede — prøv to APIs og indsæt som blob
+  const qrApis = [
+    "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(joinUrl),
+    "https://chart.googleapis.com/chart?chs=220x220&cht=qr&chl=" + encodeURIComponent(joinUrl) + "&choe=UTF-8",
+  ];
+  let qrInserted = false;
+  for (const url of qrApis) {
+    try {
+      const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      Logger.log("QR API " + url + " → " + resp.getResponseCode());
+      if (resp.getResponseCode() === 200) {
+        const blob = resp.getBlob().setName("qr.png").setContentType("image/png");
+        slide.insertImage(blob, 30, 60, 210, 210);
+        qrInserted = true;
+        break;
+      }
+    } catch (e) {
+      Logger.log("QR fejl: " + e);
+    }
+  }
+  if (!qrInserted) {
+    _addText(slide, joinUrl.replace("https://", ""), 30, 130, 210, 80, 10, false, "#8888aa");
   }
 
   return "ok";
@@ -162,6 +178,31 @@ function apiPatch(path, bodyJson) {
     muteHttpExceptions: true,
   });
   return res.getContentText();
+}
+
+// Køres manuelt fra Apps Script-editoren for at diagnosticere QR-indsættelse
+function debugQR() {
+  const testUrl = POLLINATOR_URL + "/s/TEST";
+  const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(testUrl);
+  try {
+    const resp = UrlFetchApp.fetch(qrUrl, { muteHttpExceptions: true });
+    const code = resp.getResponseCode();
+    const type = resp.getHeaders()["Content-Type"] || "(ingen)";
+    const len  = resp.getContent().length;
+    const blob = resp.getBlob().setName("qr.png").setContentType("image/png");
+
+    const slide = SlidesApp.getActivePresentation().getSlides()[0];
+    const img = slide.insertImage(blob, 30, 60, 210, 210);
+
+    SlidesApp.getUi().alert(
+      "QR debug OK\n\nHTTP: " + code +
+      "\nContent-Type: " + type +
+      "\nBytes: " + len +
+      "\nBillede id: " + img.getObjectId()
+    );
+  } catch(e) {
+    SlidesApp.getUi().alert("QR debug FEJL:\n" + e);
+  }
 }
 
 // Køres manuelt fra Apps Script-editoren for at se hvad der læses fra slides
