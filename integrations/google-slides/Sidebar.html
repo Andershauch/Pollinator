@@ -51,12 +51,17 @@
     .btn-outline { background: #fff; color: #555; border-color: #ddd; font-size: 12px; }
 
     .edit-q-btn {
-      margin-left: auto; flex-shrink: 0;
+      margin-left: 2px; flex-shrink: 0;
       background: none; border: none; cursor: pointer;
       color: #bbb; font-size: 12px; padding: 2px 4px; border-radius: 4px;
       transition: color 0.1s;
     }
     .edit-q-btn:hover { color: #f59e0b; }
+    .media-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #34d399; flex-shrink: 0; margin-left: 2px; align-self: center;
+      title: "Har medie";
+    }
     .q-edit-input {
       flex: 1; min-width: 0; padding: 4px 7px;
       border: 1.5px solid #f59e0b; border-radius: 5px;
@@ -289,13 +294,52 @@
     el.innerHTML = '<div class="q-list">' +
       localQs.map((q, i) => {
         const names = { dilemma: "DILEMMA", scale: "SKALA", wordcloud: "ORDSKY" };
+        const imgDot = q.slideImage ? '<div class="media-dot" title="Billede fra slide"></div>' : '';
         return `<div class="q-item" id="lqrow-${i}">
           <div class="q-num">${i + 1}</div>
           <div class="q-text">${q.prompt}</div>
+          ${imgDot}
           <span class="badge badge-${q.type}">${names[q.type] || q.type.toUpperCase()}</span>
           <button class="edit-q-btn" onclick="startEditLocalQ(${i})" title="Ret overskrift">✏</button>
         </div>`;
       }).join("") + '</div>';
+  }
+
+  function uploadMediaForQuestion(qId) {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "image/*,video/*";
+    inp.onchange = async () => {
+      const file = inp.files[0];
+      if (!file) return;
+      const btn = document.getElementById(`mediabtn-${qId}`);
+      if (btn) btn.textContent = "⏳";
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const b64  = ev.target.result.split(",")[1];
+        const mime = file.type;
+        const name = file.name;
+        try {
+          const upText = await gsRun("uploadMediaFile", b64, mime, name);
+          const up = JSON.parse(upText);
+          if (!up || !up.url) throw new Error(up?.error || "Upload fejlede");
+          const q = sortedQs.find(q => q.id === qId);
+          await api("PATCH", `/api/questions/${qId}`, {
+            prompt: q.prompt, options: q.options, type: q.type,
+            ...(q.type === "scale" ? { scale_max: q.scale_max ?? 10 } : {}),
+            media_url: up.url, media_type: up.type,
+          });
+          q.media_url  = up.url;
+          q.media_type = up.type;
+          renderQList();
+        } catch(e) {
+          alert("Upload fejl: " + e.message);
+          if (btn) btn.textContent = "📎";
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    inp.click();
   }
 
   function startEditLocalQ(i) {
@@ -334,9 +378,17 @@
       const s = await api("POST", "/api/sessions", { title });
 
       for (const q of localQs) {
+        let mediaUrl = null, mediaType = null;
+        if (q.slideImage) {
+          try {
+            const up = JSON.parse(await gsRun("uploadMediaFile", q.slideImage.b64, q.slideImage.mime, q.slideImage.name));
+            if (up && up.url) { mediaUrl = up.url; mediaType = up.type; }
+          } catch(e) {}
+        }
         await api("POST", `/api/sessions/${s.code}/questions`, {
           prompt: q.prompt, options: q.options, type: q.type,
           ...(q.type === "scale" && q.scaleMax ? { scale_max: q.scaleMax } : {}),
+          ...(mediaUrl ? { media_url: mediaUrl, media_type: mediaType } : {}),
         });
       }
 
@@ -635,10 +687,14 @@
   function qItemEditable(q, i, itemCls, numCls, numTxt) {
     const names = { dilemma: "DILEMMA", scale: "SKALA", wordcloud: "ORDSKY" };
     const num = numTxt ?? String(i + 1);
+    const hasMedia = !!(q.media_url);
+    const mediaIcon = hasMedia ? '🖼' : '📎';
+    const mediaTitle = hasMedia ? 'Skift medie' : 'Tilføj billede/video';
     return `<div class="q-item ${itemCls || ''}" id="qrow-${q.id}">
       <div class="q-num ${numCls || ''}">${num}</div>
       <div class="q-text">${q.prompt}</div>
       <span class="badge badge-${q.type}">${names[q.type] || q.type.toUpperCase()}</span>
+      <button class="edit-q-btn" id="mediabtn-${q.id}" onclick="uploadMediaForQuestion('${q.id}')" title="${mediaTitle}">${mediaIcon}</button>
       <button class="edit-q-btn" onclick="startEditQ('${q.id}')" title="Ret overskrift">✏</button>
     </div>`;
   }

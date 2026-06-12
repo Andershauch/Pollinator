@@ -93,7 +93,25 @@ function getSlideQuestions() {
       if (!isNaN(maxRaw) && maxRaw >= 2) scaleMax = maxRaw;
     }
 
-    questions.push({ prompt, type, options, scaleMax });
+    // Auto-detect billeder på sliden (springer meget små ikoner over)
+    let slideImage = null;
+    try {
+      const imgs = slide.getImages();
+      for (const img of imgs) {
+        const blob  = img.getAs("image/png");
+        const bytes = blob.getBytes();
+        if (bytes.length > 5000) { // ignorer dekorative ikoner < 5KB
+          slideImage = {
+            b64:  Utilities.base64Encode(bytes),
+            mime: "image/png",
+            name: "slide-image.png",
+          };
+          break;
+        }
+      }
+    } catch(e) { Logger.log("Billede-læsning fejl: " + e); }
+
+    questions.push({ prompt, type, options, scaleMax, slideImage });
   }
 
   return questions;
@@ -243,6 +261,19 @@ function _bucketTally(tally, buckets) {
     res.push({ index: Math.round((lo + hi) / 2), label: lo === hi ? String(lo) : lo + "–" + hi, votes });
   }
   return res;
+}
+
+// ── Media upload ─────────────────────────────────────────────────────────────
+
+function uploadMediaFile(base64Data, mimeType, filename) {
+  const bytes = Utilities.base64Decode(base64Data);
+  const blob  = Utilities.newBlob(bytes, mimeType, filename);
+  const res   = UrlFetchApp.fetch(POLLINATOR_URL + "/api/upload", {
+    method:           "post",
+    payload:          { file: blob },
+    muteHttpExceptions: true,
+  });
+  return res.getContentText();
 }
 
 // ── API-proxies via UrlFetchApp ───────────────────────────────────────────────
