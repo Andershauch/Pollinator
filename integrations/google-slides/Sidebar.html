@@ -287,7 +287,37 @@
       return;
     }
     el.innerHTML = '<div class="q-list">' +
-      localQs.map((q, i) => qItem(i + 1, q.prompt, q.type, "", "")).join("") + '</div>';
+      localQs.map((q, i) => {
+        const names = { dilemma: "DILEMMA", scale: "SKALA", wordcloud: "ORDSKY" };
+        return `<div class="q-item" id="lqrow-${i}">
+          <div class="q-num">${i + 1}</div>
+          <div class="q-text">${q.prompt}</div>
+          <span class="badge badge-${q.type}">${names[q.type] || q.type.toUpperCase()}</span>
+          <button class="edit-q-btn" onclick="startEditLocalQ(${i})" title="Ret overskrift">✏</button>
+        </div>`;
+      }).join("") + '</div>';
+  }
+
+  function startEditLocalQ(i) {
+    const q = localQs[i];
+    const row = document.getElementById(`lqrow-${i}`);
+    row.innerHTML = `
+      <input id="lqinput-${i}" class="q-edit-input" value="${q.prompt.replace(/"/g, '&quot;')}" />
+      <button class="edit-save-btn" onclick="saveEditLocalQ(${i})">Gem</button>
+      <button class="edit-cancel-btn" onclick="renderIdleQs()">✕</button>`;
+    const inp = document.getElementById(`lqinput-${i}`);
+    inp.focus(); inp.select();
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") saveEditLocalQ(i);
+      if (e.key === "Escape") renderIdleQs();
+    });
+  }
+
+  function saveEditLocalQ(i) {
+    const inp = document.getElementById(`lqinput-${i}`);
+    const val = inp ? inp.value.trim() : "";
+    if (val) localQs[i].prompt = val;
+    renderIdleQs();
   }
 
   // ── Create session ────────────────────────────────────
@@ -334,8 +364,9 @@
     try {
       const slideQs = await gsRun("getSlideQuestions");
       const current = await api("GET", `/api/sessions/${session.code}`);
-      const existing = current.questions || [];
+      let existing = current.questions || [];
 
+      // Tilføj nye (matcher på prompt + type)
       let added = 0;
       for (const q of slideQs) {
         const dup = existing.some(e => e.prompt === q.prompt && e.type === q.type);
@@ -348,14 +379,25 @@
         added++;
       }
 
+      // Fjern spørgsmål der ikke længere er i slides
+      let removed = 0;
+      for (const e of existing) {
+        const stillInSlides = slideQs.some(q => q.prompt === e.prompt && q.type === e.type);
+        if (stillInSlides) continue;
+        await api("DELETE", `/api/questions/${e.id}`);
+        removed++;
+      }
+
       session = await api("GET", `/api/sessions/${session.code}`);
       sortedQs = [...session.questions].sort((a, b) => a.position - b.position);
-
       renderQList();
 
-      msg.innerHTML = added > 0
-        ? `<div class="ok-msg">${added} nyt spørgsmål tilføjet</div>`
-        : `<div class="hint">Ingen nye spørgsmål fundet</div>`;
+      const parts = [];
+      if (added)   parts.push(`${added} tilføjet`);
+      if (removed) parts.push(`${removed} fjernet`);
+      msg.innerHTML = parts.length
+        ? `<div class="ok-msg">${parts.join(" · ")}</div>`
+        : `<div class="hint">Ingen ændringer</div>`;
     } catch (e) {
       msg.innerHTML = `<div class="err">${e.message}</div>`;
     } finally {
@@ -569,10 +611,12 @@
 
   // API-kald via server-side UrlFetchApp (ingen CORS-problemer)
   async function api(method, path, body) {
-    const fn = method === "GET" ? "apiGet"
-             : method === "POST" ? "apiPost"
+    const fn = method === "GET"    ? "apiGet"
+             : method === "POST"   ? "apiPost"
+             : method === "DELETE" ? "apiDelete"
              : "apiPatch";
     const resultJson = await gsRun(fn, path, body ? JSON.stringify(body) : null);
+    if (!resultJson || resultJson === "null") return null;
     const data = JSON.parse(resultJson);
     if (data && data.error) throw new Error(data.error);
     return data;

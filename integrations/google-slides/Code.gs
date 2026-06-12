@@ -164,6 +164,14 @@ function apiPost(path, bodyJson) {
   return res.getContentText();
 }
 
+function apiDelete(path) {
+  const res = UrlFetchApp.fetch(POLLINATOR_URL + path, {
+    method: "delete",
+    muteHttpExceptions: true,
+  });
+  return res.getContentText();
+}
+
 function apiPatch(path, bodyJson) {
   const res = UrlFetchApp.fetch(POLLINATOR_URL + path, {
     method: "patch",
