@@ -100,6 +100,35 @@ function getSlideQuestions() {
   return questions;
 }
 
+// ── API-proxy via UrlFetchApp (undgår CORS-begrænsninger i sidebar) ──────────
+
+function apiGet(path) {
+  const res = UrlFetchApp.fetch(POLLINATOR_URL + path, {
+    muteHttpExceptions: true,
+  });
+  return res.getContentText();
+}
+
+function apiPost(path, bodyJson) {
+  const res = UrlFetchApp.fetch(POLLINATOR_URL + path, {
+    method: "post",
+    contentType: "application/json",
+    payload: bodyJson || "{}",
+    muteHttpExceptions: true,
+  });
+  return res.getContentText();
+}
+
+function apiPatch(path, bodyJson) {
+  const res = UrlFetchApp.fetch(POLLINATOR_URL + path, {
+    method: "patch",
+    contentType: "application/json",
+    payload: bodyJson || "{}",
+    muteHttpExceptions: true,
+  });
+  return res.getContentText();
+}
+
 // Køres manuelt fra Apps Script-editoren for at se hvad der læses fra slides
 function debugSlides() {
   const presentation = SlidesApp.getActivePresentation();
