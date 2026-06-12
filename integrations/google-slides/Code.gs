@@ -100,6 +100,38 @@ function getSlideQuestions() {
   return questions;
 }
 
+// ── Join-slide ────────────────────────────────────────────────────────────────
+
+// Indsætter en deltager-slide som slide 1 i præsentationen
+function insertJoinSlide(code, sessionTitle) {
+  const presentation = SlidesApp.getActivePresentation();
+  const joinUrl = POLLINATOR_URL + "/s/" + code;
+  const qrUrl = "https://chart.googleapis.com/chart?chs=220x220&cht=qr&chl="
+    + encodeURIComponent(joinUrl) + "&choe=UTF-8&chld=M|1";
+
+  const slide = presentation.insertSlide(0, SlidesApp.PredefinedLayout.BLANK);
+  slide.getBackground().setSolidFill(17, 19, 25); // #111319
+
+  // Kicker
+  _addText(slide, "SCAN OG DELTAG", 260, 50, 420, 30, 11, true, "#f59e0b");
+
+  // Workshop-titel
+  _addText(slide, sessionTitle, 260, 85, 420, 50, 20, true, "#ffffff");
+
+  // Stor kode
+  _addText(slide, code, 260, 148, 420, 110, 80, true, "#f59e0b");
+
+  // URL
+  _addText(slide, joinUrl.replace("https://", ""), 260, 268, 420, 32, 13, false, "#8888aa");
+
+  // QR-kode billede
+  try {
+    slide.insertImage(qrUrl, 30, 60, 210, 210);
+  } catch (e) {}
+
+  return "ok";
+}
+
 // ── API-proxy via UrlFetchApp (undgår CORS-begrænsninger i sidebar) ──────────
 
 function apiGet(path) {

@@ -93,6 +93,17 @@
       margin-top: 4px; word-break: break-all;
     }
 
+    .screen-link {
+      display: block; width: 100%;
+      padding: 9px 14px; margin-top: 8px;
+      border-radius: 7px; border: 1.5px solid #6366f1;
+      background: transparent; color: #818cf8;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.06em; cursor: pointer; text-align: center;
+      text-decoration: none; transition: background 0.12s;
+    }
+    .screen-link:hover { background: rgba(99,102,241,0.1); }
+
     .pulse-row {
       display: flex; align-items: center; gap: 6px;
       font-size: 11px; color: #888; margin-bottom: 10px;
@@ -173,6 +184,8 @@
     <div class="code-big" id="lobby-code"></div>
     <div class="join-url" id="lobby-url"></div>
     <div class="gap"></div>
+    <a id="screen-link" href="#" target="_blank" class="screen-link">Åbn storskærm ↗</a>
+    <div class="gap"></div>
     <div class="pulse-row"><div class="pulse-dot"></div><span>Venter på deltagere…</span></div>
     <button class="btn btn-green" onclick="startSession()">Start workshop →</button>
   </div>
@@ -185,6 +198,7 @@
 <!-- ── ACTIVE ────────────────────────────────────────────── -->
 <div id="s-active" class="hidden">
   <div class="section">
+    <a id="screen-link-active" href="#" target="_blank" class="screen-link" style="margin-bottom:10px;">Storskærm ↗</a>
     <div class="pulse-row">
       <div class="pulse-dot"></div>
       <span id="a-progress"></span>
@@ -268,6 +282,9 @@
       session = await api("GET", `/api/sessions/${s.code}`);
       sortedQs = [...session.questions].sort((a, b) => a.position - b.position);
 
+      // Indsæt join-slide i præsentationen (fejl her stopper ikke flowet)
+      try { await gsRun("insertJoinSlide", session.code, title); } catch(e) {}
+
       goLobby();
     } catch (e) {
       showErr("idle-err", e.message);
@@ -279,8 +296,11 @@
 
   function goLobby() {
     show("s-lobby");
+    const screenUrl = `${BASE}/screen/${session.code}`;
     document.getElementById("lobby-code").textContent = session.code;
     document.getElementById("lobby-url").textContent = `${BASE}/s/${session.code}`;
+    document.getElementById("screen-link").href = screenUrl;
+    document.getElementById("screen-link-active").href = screenUrl;
     document.getElementById("lobby-qs").innerHTML =
       sortedQs.map((q, i) => qItem(i + 1, q.prompt, q.type, "", "")).join("");
   }
