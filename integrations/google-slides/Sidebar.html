@@ -305,39 +305,63 @@
       }).join("") + '</div>';
   }
 
-  function uploadMediaForQuestion(qId) {
+  async function uploadMediaForQuestion(qId) {
     const inp = document.createElement("input");
     inp.type = "file";
     inp.accept = "image/*,video/*";
     inp.onchange = async () => {
       const file = inp.files[0];
       if (!file) return;
-      const btn = document.getElementById(`mediabtn-${qId}`);
+      const btn = document.getElementById("mediabtn-" + qId);
       if (btn) btn.textContent = "⏳";
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const b64  = ev.target.result.split(",")[1];
-        const mime = file.type;
-        const name = file.name;
-        try {
-          const upText = await gsRun("uploadMediaFile", b64, mime, name);
-          const up = JSON.parse(upText);
-          if (!up || !up.url) throw new Error(up?.error || "Upload fejlede");
-          const q = sortedQs.find(q => q.id === qId);
-          await api("PATCH", `/api/questions/${qId}`, {
-            prompt: q.prompt, options: q.options, type: q.type,
-            ...(q.type === "scale" ? { scale_max: q.scale_max ?? 10 } : {}),
-            media_url: up.url, media_type: up.type,
-          });
-          q.media_url  = up.url;
-          q.media_type = up.type;
-          renderQList();
-        } catch(e) {
-          alert("Upload fejl: " + e.message);
-          if (btn) btn.textContent = "📎";
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Step 1: get a signed client token from our server
+        const tokenRes = await fetch(BASE + "/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "blob.generate-client-token",
+            payload: {
+              pathname: file.name,
+              callbackUrl: BASE + "/api/upload",
+              multipart: false,
+              clientPayload: null,
+            },
+          }),
+        });
+        const { clientToken } = await tokenRes.json();
+        if (!clientToken) throw new Error("Ingen client token");
+
+        // Step 2: PUT directly to Vercel Blob CDN — ingen 4.5 MB serverless-grænse
+        const uploadRes = await fetch(
+          "https://blob.vercel-storage.com/" + encodeURIComponent(file.name),
+          {
+            method: "PUT",
+            headers: {
+              "Authorization": "Bearer " + clientToken,
+              "x-content-type": file.type,
+            },
+            body: file,
+          }
+        );
+        const { url } = await uploadRes.json();
+        if (!url) throw new Error("Ingen URL fra Vercel Blob");
+
+        // Step 3: gem på spørgsmålet
+        const q = sortedQs.find(q => q.id === qId);
+        await api("PATCH", "/api/questions/" + qId, {
+          prompt: q.prompt, options: q.options, type: q.type,
+          ...(q.type === "scale" ? { scale_max: q.scale_max ?? 10 } : {}),
+          media_url: url,
+          media_type: file.type.startsWith("video/") ? "video" : "image",
+        });
+        q.media_url  = url;
+        q.media_type = file.type.startsWith("video/") ? "video" : "image";
+        renderQList();
+      } catch(e) {
+        alert("Upload fejl: " + e.message);
+        if (btn) btn.textContent = "📎";
+      }
     };
     inp.click();
   }
