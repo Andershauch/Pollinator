@@ -124,28 +124,18 @@ function insertJoinSlide(code, sessionTitle) {
   // URL
   _addText(slide, joinUrl.replace("https://", ""), 260, 268, 420, 32, 13, false, "#8888aa");
 
-  // QR-kode billede — prøv to APIs og indsæt som blob
-  const qrApis = [
-    "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(joinUrl),
-    "https://chart.googleapis.com/chart?chs=220x220&cht=qr&chl=" + encodeURIComponent(joinUrl) + "&choe=UTF-8",
-  ];
-  let qrInserted = false;
-  for (const url of qrApis) {
-    try {
-      const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-      Logger.log("QR API " + url + " → " + resp.getResponseCode());
-      if (resp.getResponseCode() === 200) {
-        const blob = resp.getBlob().setName("qr.png").setContentType("image/png");
-        slide.insertImage(blob, 30, 60, 210, 210);
-        qrInserted = true;
-        break;
-      }
-    } catch (e) {
-      Logger.log("QR fejl: " + e);
+  // QR-kode billede — genereret af Pollinator (samme server som API-kald)
+  const qrEndpoint = POLLINATOR_URL + "/api/qr?url=" + encodeURIComponent(joinUrl);
+  try {
+    const resp = UrlFetchApp.fetch(qrEndpoint, { muteHttpExceptions: true });
+    if (resp.getResponseCode() === 200) {
+      const blob = resp.getBlob().setName("qr.png").setContentType("image/png");
+      slide.insertImage(blob, 30, 60, 210, 210);
+    } else {
+      Logger.log("QR endpoint fejl: " + resp.getResponseCode());
     }
-  }
-  if (!qrInserted) {
-    _addText(slide, joinUrl.replace("https://", ""), 30, 130, 210, 80, 10, false, "#8888aa");
+  } catch (e) {
+    Logger.log("QR fejl: " + e);
   }
 
   return "ok";
@@ -183,7 +173,7 @@ function apiPatch(path, bodyJson) {
 // Køres manuelt fra Apps Script-editoren for at diagnosticere QR-indsættelse
 function debugQR() {
   const testUrl = POLLINATOR_URL + "/s/TEST";
-  const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(testUrl);
+  const qrUrl = POLLINATOR_URL + "/api/qr?url=" + encodeURIComponent(testUrl);
   try {
     const resp = UrlFetchApp.fetch(qrUrl, { muteHttpExceptions: true });
     const code = resp.getResponseCode();
