@@ -329,8 +329,9 @@
             },
           }),
         });
-        const { clientToken } = await tokenRes.json();
-        if (!clientToken) throw new Error("Ingen client token");
+        const tokenData = await tokenRes.json();
+        const clientToken = tokenData.clientToken;
+        if (!clientToken) throw new Error("Token fejl (HTTP " + tokenRes.status + "): " + JSON.stringify(tokenData));
 
         // Step 2: PUT directly to Vercel Blob API — ingen 4.5 MB serverless-grænse
         const params = new URLSearchParams({ pathname: file.name });
