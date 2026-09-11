@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { normalizeWord } from "@/lib/aggregate";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "question is closed" }, { status: 403 });
   }
 
-  const normalized = word.trim().toLowerCase();
+  const normalized = normalizeWord(word);
 
   await sql`
     INSERT INTO word_responses (question_id, word, participant_key)

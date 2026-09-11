@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { tallyDilemma, tallyScale, type VoteCount } from "@/lib/aggregate";
 import ReportClient from "./ReportClient";
 
 type Props = { params: Promise<{ code: string }> };
@@ -45,15 +46,9 @@ export default async function ReportPage({ params }: Props) {
           SELECT option_index, COUNT(*)::int AS votes
           FROM responses WHERE question_id = ${q.id as string}
           GROUP BY option_index ORDER BY option_index
-        `) as { option_index: number; votes: number }[];
-        const tally: TallyItem[] = Array.from({ length: 10 }, (_, i) => {
-          const val = i + 1;
-          const votes = counts.find((r) => r.option_index === val)?.votes ?? 0;
-          return { index: val, label: String(val), votes, pct: 0 };
-        });
-        const total = tally.reduce((s, t) => s + t.votes, 0);
-        tally.forEach((t) => { t.pct = total > 0 ? Math.round((t.votes / total) * 100) : 0; });
-        const average = total > 0 ? tally.reduce((s, t) => s + t.index * t.votes, 0) / total : 0;
+        `) as VoteCount[];
+        const scaleMax = (q.scale_max as number) ?? 10;
+        const { tally, total, average } = tallyScale(scaleMax, counts);
         const options = q.options as string[];
         return {
           id: q.id as string, prompt: q.prompt as string, type: "scale", position: q.position as number,
@@ -61,20 +56,16 @@ export default async function ReportPage({ params }: Props) {
           lowLabel: options[0] ?? "", highLabel: options[1] ?? "",
         };
       } else {
-        const tally = (await sql`
+        const counts = (await sql`
           SELECT option_index, COUNT(*)::int AS votes
           FROM responses WHERE question_id = ${q.id as string}
           GROUP BY option_index
-        `) as { option_index: number; votes: number }[];
-        const total = tally.reduce((s, t) => s + t.votes, 0);
+        `) as VoteCount[];
         const options = q.options as string[];
+        const { tally, total } = tallyDilemma(options, counts);
         return {
           id: q.id as string, prompt: q.prompt as string, type: q.type as string, position: q.position as number,
-          total,
-          tally: options.map((label: string, i: number) => {
-            const votes = tally.find((t) => t.option_index === i)?.votes ?? 0;
-            return { index: i, label, votes, pct: total > 0 ? Math.round((votes / total) * 100) : 0 };
-          }),
+          total, tally,
         };
       }
     })

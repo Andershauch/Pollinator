@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { tallyDilemma, tallyScale, type VoteCount } from "@/lib/aggregate";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -29,23 +30,22 @@ export async function GET(_req: NextRequest, { params }: Params) {
         const total = (words as { count: number }[]).reduce((s, w) => s + w.count, 0);
         return { ...q, words, total };
       } else {
-        const tally = await sql`
+        const counts = (await sql`
           SELECT option_index, COUNT(*)::int AS votes
           FROM responses
           WHERE question_id = ${q.id as string}
           GROUP BY option_index
-        `;
-        const total = (tally as { votes: number }[]).reduce((s, t) => s + t.votes, 0);
+        `) as VoteCount[];
+
+        if (q.type === "scale") {
+          const scaleMax = (q.scale_max as number) ?? 10;
+          const { tally, total, average } = tallyScale(scaleMax, counts);
+          return { ...q, total, tally, average };
+        }
+
         const options = q.options as string[];
-        return {
-          ...q,
-          total,
-          tally: options.map((label: string, i: number) => {
-            const votes = (tally as { option_index: number; votes: number }[])
-              .find((t) => t.option_index === i)?.votes ?? 0;
-            return { index: i, label, votes, pct: total > 0 ? Math.round((votes / total) * 100) : 0 };
-          }),
-        };
+        const { tally, total } = tallyDilemma(options, counts);
+        return { ...q, total, tally };
       }
     })
   );
