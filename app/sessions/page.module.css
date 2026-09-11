@@ -1,0 +1,216 @@
+.page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  padding: 40px 24px;
+}
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.topBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 20%, transparent);
+  display: inline-block;
+}
+
+.brandName {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--muted);
+}
+
+.h1 {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.topActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.dot2 {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--faint);
+  display: inline-block;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.badgeCloud {
+  background: color-mix(in oklch, var(--c1) 15%, transparent);
+  color: var(--c1);
+  border-color: color-mix(in oklch, var(--c1) 35%, transparent);
+}
+
+.badgeDilemma {
+  background: color-mix(in oklch, var(--c2) 15%, transparent);
+  color: var(--c2);
+  border-color: color-mix(in oklch, var(--c2) 35%, transparent);
+}
+
+.badgeScale {
+  background: color-mix(in oklch, var(--c3) 15%, transparent);
+  color: var(--c3);
+  border-color: color-mix(in oklch, var(--c3) 35%, transparent);
+}
+
+.badgeText {
+  background: color-mix(in oklch, var(--c4) 15%, transparent);
+  color: var(--c4);
+  border-color: color-mix(in oklch, var(--c4) 35%, transparent);
+}
+
+.badgeRanking {
+  background: color-mix(in oklch, var(--c5) 15%, transparent);
+  color: var(--c5);
+  border-color: color-mix(in oklch, var(--c5) 35%, transparent);
+}
+
+.cardActions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btnPrimary {
+  background: var(--accent);
+  color: #13150e;
+  border: none;
+  border-radius: 9px;
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btnGhost {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1.5px solid var(--line-2);
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btnSmallGhost {
+  background: transparent;
+  color: var(--muted);
+  border: 1.5px solid var(--line-2);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.empty {
+  color: var(--faint);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+/* SessionsClient restart button */
+.restartBtn {
+  background: var(--c2);
+  color: #0d1a0f;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}

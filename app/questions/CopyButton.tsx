@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import s from "./page.module.css";
 
 export default function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -12,16 +13,8 @@ export default function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button onClick={copy} style={btn}>
+    <button onClick={copy} className={s.copyBtn}>
       {copied ? "Kopieret ✓" : "Kopiér"}
     </button>
   );
 }
-
-const btn: React.CSSProperties = {
-  background: "var(--bg-2)", color: "var(--muted)",
-  border: "1.5px solid var(--line-2)", borderRadius: 8,
-  padding: "7px 14px", fontSize: 12, fontWeight: 600,
-  fontFamily: '"Bahnschrift", var(--oswald,"Oswald"), "Segoe UI", system-ui, sans-serif',
-  letterSpacing: "0.08em", cursor: "pointer",
-};

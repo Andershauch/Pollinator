@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import s from "./page.module.css";
 
 export default function SessionsClient({ code }: { code: string }) {
   const [loading, setLoading] = useState(false);
@@ -19,16 +20,8 @@ export default function SessionsClient({ code }: { code: string }) {
   }
 
   return (
-    <button onClick={restart} disabled={loading} style={btn}>
+    <button onClick={restart} disabled={loading} className={s.restartBtn}>
       {loading ? "…" : "Genstart ↗"}
     </button>
   );
 }
-
-const btn: React.CSSProperties = {
-  background: "var(--c2)", color: "#0d1a0f",
-  border: "none", borderRadius: 8,
-  padding: "8px 16px", fontSize: 13, fontWeight: 700,
-  fontFamily: '"Bahnschrift", var(--oswald,"Oswald"), "Segoe UI", system-ui, sans-serif',
-  letterSpacing: "0.06em", cursor: "pointer",
-};

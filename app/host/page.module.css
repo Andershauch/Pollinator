@@ -1,0 +1,206 @@
+.page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Bahnschrift", var(--oswald, "Oswald"), "Segoe UI", system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Nav */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.navBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 20%, transparent);
+  display: inline-block;
+}
+
+.brandName {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--fg);
+}
+
+.navLinks {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-decoration: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 14px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.navLink:hover {
+  color: var(--fg);
+  border-color: var(--line-2);
+}
+
+/* Hero */
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 64px 24px 48px;
+}
+
+.heroText {
+  text-align: center;
+  max-width: 560px;
+}
+
+.h1 {
+  font-size: clamp(30px, 5vw, 52px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0 0 16px;
+  color: var(--fg);
+}
+
+.h1Accent {
+  color: var(--accent);
+}
+
+.sub {
+  font-size: clamp(15px, 2vw, 18px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Form card */
+.formCard {
+  width: min(500px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 18px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: var(--faint);
+}
+
+.input {
+  background: var(--bg-2);
+  border: 1.5px solid var(--line-2);
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 18px;
+  color: var(--fg);
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+}
+
+.btn {
+  background: var(--accent);
+  color: #13150e;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.err {
+  color: var(--c4);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.formHint {
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Feature tiles */
+.features {
+  display: flex;
+  gap: 16px;
+  padding: 0 24px 48px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.tile {
+  flex: 1 1 160px;
+  max-width: 220px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tileIcon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.tileTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: 0.02em;
+}
+
+.tileDesc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
