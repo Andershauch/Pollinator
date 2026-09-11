@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { tallyDilemma, tallyScale, type VoteCount } from "@/lib/aggregate";
+import { tallyDilemma, tallyScale, tallyRanking, type VoteCount } from "@/lib/aggregate";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -37,6 +37,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
           ORDER BY created_at ASC
         `;
         return { ...q, textAnswers, total: textAnswers.length };
+      } else if (q.type === "ranking") {
+        const rows = (await sql`
+          SELECT ranking FROM ranking_responses WHERE question_id = ${q.id as string}
+        `) as { ranking: number[] }[];
+        const options = q.options as string[];
+        const { ranking, total } = tallyRanking(options, rows.map((r) => r.ranking));
+        return { ...q, ranking, total };
       } else {
         const counts = (await sql`
           SELECT option_index, COUNT(*)::int AS votes

@@ -12,16 +12,18 @@ const COLORS = [
 type TallyItem = { index: number; label: string; votes: number; pct: number };
 type WordItem = { word: string; count: number };
 type TextAnswerItem = { answer: string; created_at: string };
+type RankingItem = { index: number; label: string; points: number };
 
 type Question = {
   id: string;
   prompt: string;
-  type: "dilemma" | "wordcloud" | "scale" | "text";
+  type: "dilemma" | "wordcloud" | "scale" | "text" | "ranking";
   position: number;
   total: number;
   tally?: TallyItem[];
   words?: WordItem[];
   textAnswers?: TextAnswerItem[];
+  ranking?: RankingItem[];
   average?: number;
   lowLabel?: string;
   highLabel?: string;
@@ -40,7 +42,7 @@ function buildCSV(session: Session, questions: Question[]): string {
   ];
 
   const typeName = (type: string) =>
-    type === "wordcloud" ? "Ordsky" : type === "scale" ? "Skala" : type === "text" ? "Fritekst" : "Dilemma";
+    type === "wordcloud" ? "Ordsky" : type === "scale" ? "Skala" : type === "text" ? "Fritekst" : type === "ranking" ? "Rangering" : "Dilemma";
 
   questions.forEach((q, i) => {
     lines.push(`Spørgsmål ${i + 1} (${typeName(q.type)}):,"${q.prompt}"`);
@@ -58,6 +60,9 @@ function buildCSV(session: Session, questions: Question[]): string {
     } else if (q.type === "text" && q.textAnswers) {
       lines.push("Svar");
       q.textAnswers.forEach((a) => lines.push(`"${a.answer.replace(/"/g, '""')}"`));
+    } else if (q.type === "ranking" && q.ranking) {
+      lines.push("Placering,Emne,Point");
+      q.ranking.forEach((r, i) => lines.push(`${i + 1},"${r.label}",${r.points}`));
     }
     lines.push("");
   });
@@ -194,6 +199,31 @@ function TextAnswerResult({ answers, total }: { answers: TextAnswerItem[]; total
   );
 }
 
+/* ── Rangering ──────────────────────────────────────────────── */
+
+function RankingResult({ ranking, total }: { ranking: RankingItem[]; total: number }) {
+  const maxPoints = Math.max(1, ...ranking.map((r) => r.points));
+  return (
+    <div className={s.tallyList}>
+      {ranking.map((item, i) => (
+        <div key={item.index} className={s.tallyRow}>
+          <div className={s.tallyLabel}>{i + 1}. {item.label}</div>
+          <div className={s.barTrack}>
+            <div
+              className={s.barFill}
+              style={{ width: `${(item.points / maxPoints) * 100}%`, background: COLORS[item.index % 4] }}
+            />
+          </div>
+          <div className={s.tallyStat}>
+            <span className={s.tallyVotes}>{item.points} point</span>
+          </div>
+        </div>
+      ))}
+      <div className={s.totalNote}>{total} {total === 1 ? "rangering" : "rangeringer"}</div>
+    </div>
+  );
+}
+
 /* ── Main ───────────────────────────────────────────────────── */
 
 export default function ReportClient({
@@ -236,7 +266,7 @@ export default function ReportClient({
             <div className={s.cardHead}>
               <span className={s.qNum}>{i + 1}</span>
               <span className={s.qTypeBadge}>
-                {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA 1–10" : q.type === "text" ? "FRITEKST" : "DILEMMA"}
+                {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA 1–10" : q.type === "text" ? "FRITEKST" : q.type === "ranking" ? "RANGERING" : "DILEMMA"}
               </span>
               <h2 className={s.qPrompt}>{q.prompt}</h2>
             </div>
@@ -258,6 +288,9 @@ export default function ReportClient({
               )}
               {q.type === "text" && q.textAnswers && (
                 <TextAnswerResult answers={q.textAnswers} total={q.total} />
+              )}
+              {q.type === "ranking" && q.ranking && (
+                <RankingResult ranking={q.ranking} total={q.total} />
               )}
               {q.total === 0 && (
                 <p className={s.noData}>Ingen svar registreret</p>

@@ -279,6 +279,68 @@
   text-align: right;
 }
 
+/* ── Rangering leaderboard ────────────────────────────────── */
+
+.rankBoard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.rankBoardRow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.rankBoardPos {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  color: var(--fg);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rankBoardLabel {
+  width: 240px;
+  flex-shrink: 0;
+  font-size: clamp(16px, 1.8vw, 22px);
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.25;
+}
+
+.rankBoardTrack {
+  flex: 1;
+  height: 36px;
+  background: var(--bg-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rankBoardFill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rankBoardPoints {
+  width: 56px;
+  flex-shrink: 0;
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* ── Bottom row: consensus + total ──────────────────────── */
 
 .bottomLine {

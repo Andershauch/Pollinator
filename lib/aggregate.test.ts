@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tallyDilemma, tallyScale, normalizeWord, isValidTextAnswer, MAX_TEXT_ANSWER_LENGTH } from "./aggregate";
+import { tallyDilemma, tallyScale, normalizeWord, isValidTextAnswer, MAX_TEXT_ANSWER_LENGTH, tallyRanking, isValidRanking } from "./aggregate";
 
 describe("tallyDilemma", () => {
   it("builds one bucket per option, defaulting to zero votes", () => {
@@ -127,5 +127,76 @@ describe("isValidTextAnswer", () => {
   it("measures length after trimming surrounding whitespace", () => {
     const padded = "  " + "a".repeat(MAX_TEXT_ANSWER_LENGTH) + "  ";
     expect(isValidTextAnswer(padded)).toBe(true);
+  });
+});
+
+describe("tallyRanking", () => {
+  const options = ["A", "B", "C"];
+
+  it("scores 1st choice highest (N points) down to 1 point for last", () => {
+    const { ranking, total } = tallyRanking(options, [[0, 1, 2]]);
+    expect(total).toBe(1);
+    expect(ranking).toEqual([
+      { index: 0, label: "A", points: 3 },
+      { index: 1, label: "B", points: 2 },
+      { index: 2, label: "C", points: 1 },
+    ]);
+  });
+
+  it("sums Borda points across multiple rankings and sorts descending", () => {
+    const { ranking, total } = tallyRanking(options, [
+      [0, 1, 2], // A=3, B=2, C=1
+      [1, 0, 2], // B=3, A=2, C=1
+      [1, 2, 0], // B=3, C=2, A=1
+    ]);
+    expect(total).toBe(3);
+    // A: 3+2+1=6, B: 2+3+3=8, C: 1+1+2=4
+    expect(ranking).toEqual([
+      { index: 1, label: "B", points: 8 },
+      { index: 0, label: "A", points: 6 },
+      { index: 2, label: "C", points: 4 },
+    ]);
+  });
+
+  it("breaks ties by preserving the original option order (stable sort)", () => {
+    const { ranking } = tallyRanking(["A", "B"], [[0, 1], [1, 0]]);
+    // Both score 3 points each — original order (A before B) should win the tie.
+    expect(ranking).toEqual([
+      { index: 0, label: "A", points: 3 },
+      { index: 1, label: "B", points: 3 },
+    ]);
+  });
+
+  it("returns all-zero points and no crash when there are no rankings yet", () => {
+    const { ranking, total } = tallyRanking(options, []);
+    expect(total).toBe(0);
+    expect(ranking.every((r) => r.points === 0)).toBe(true);
+    expect(ranking.map((r) => r.index)).toEqual([0, 1, 2]);
+  });
+});
+
+describe("isValidRanking", () => {
+  it("accepts a full permutation of option indices", () => {
+    expect(isValidRanking([2, 0, 1], 3)).toBe(true);
+  });
+
+  it("rejects a ranking with the wrong length", () => {
+    expect(isValidRanking([0, 1], 3)).toBe(false);
+  });
+
+  it("rejects a ranking with a duplicate index", () => {
+    expect(isValidRanking([0, 0, 1], 3)).toBe(false);
+  });
+
+  it("rejects a ranking with an out-of-range index", () => {
+    expect(isValidRanking([0, 1, 5], 3)).toBe(false);
+  });
+
+  it("rejects a non-array value", () => {
+    expect(isValidRanking("not an array", 3)).toBe(false);
+  });
+
+  it("rejects non-integer values", () => {
+    expect(isValidRanking([0, 1.5, 2], 3)).toBe(false);
   });
 });

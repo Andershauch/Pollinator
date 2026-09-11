@@ -8,15 +8,15 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { code } = await params;
   const { prompt, options, position, duration_seconds, type, media_url, media_type, scale_max } = await req.json();
 
-  const qtype = type === "wordcloud" ? "wordcloud" : type === "scale" ? "scale" : type === "text" ? "text" : "dilemma";
-  const needsOptions = qtype === "dilemma";
+  const qtype = type === "wordcloud" ? "wordcloud" : type === "scale" ? "scale" : type === "text" ? "text" : type === "ranking" ? "ranking" : "dilemma";
+  const needsOptions = qtype === "dilemma" || qtype === "ranking";
 
   if (!prompt?.trim()) {
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
   }
   if (needsOptions && (!Array.isArray(options) || options.length === 0)) {
     return NextResponse.json(
-      { error: "options (non-empty array) required for dilemma questions" },
+      { error: "options (non-empty array) required for dilemma/ranking questions" },
       { status: 400 }
     );
   }

@@ -799,6 +799,12 @@
   border-color: color-mix(in oklch, var(--c4) 35%, transparent);
 }
 
+.bankBadge_ranking {
+  color: var(--c5);
+  background: color-mix(in oklch, var(--c5) 12%, transparent);
+  border-color: color-mix(in oklch, var(--c5) 35%, transparent);
+}
+
 .bankPrompt {
   flex: 1;
   font-size: 15px;

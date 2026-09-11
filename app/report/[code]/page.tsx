@@ -1,5 +1,5 @@
 import { sql } from "@/lib/db";
-import { tallyDilemma, tallyScale, type VoteCount } from "@/lib/aggregate";
+import { tallyDilemma, tallyScale, tallyRanking, type VoteCount } from "@/lib/aggregate";
 import ReportClient from "./ReportClient";
 
 type Props = { params: Promise<{ code: string }> };
@@ -25,9 +25,10 @@ export default async function ReportPage({ params }: Props) {
   type TallyItem = { index: number; label: string; votes: number; pct: number };
   type WordItem = { word: string; count: number };
   type TextAnswerItem = { answer: string; created_at: string };
+  type RankingItem = { index: number; label: string; points: number };
   type QuestionResult = {
     id: string; prompt: string; type: string; position: number; total: number;
-    tally?: TallyItem[]; words?: WordItem[]; textAnswers?: TextAnswerItem[];
+    tally?: TallyItem[]; words?: WordItem[]; textAnswers?: TextAnswerItem[]; ranking?: RankingItem[];
     average?: number; lowLabel?: string; highLabel?: string;
   };
 
@@ -50,6 +51,13 @@ export default async function ReportPage({ params }: Props) {
           ORDER BY created_at ASC
         `) as TextAnswerItem[];
         return { id: q.id as string, prompt: q.prompt as string, type: q.type as string, position: q.position as number, textAnswers, total: textAnswers.length };
+      } else if (q.type === "ranking") {
+        const rows = (await sql`
+          SELECT ranking FROM ranking_responses WHERE question_id = ${q.id as string}
+        `) as { ranking: number[] }[];
+        const options = q.options as string[];
+        const { ranking, total } = tallyRanking(options, rows.map((r) => r.ranking));
+        return { id: q.id as string, prompt: q.prompt as string, type: q.type as string, position: q.position as number, ranking, total };
       } else if (q.type === "scale") {
         const counts = (await sql`
           SELECT option_index, COUNT(*)::int AS votes

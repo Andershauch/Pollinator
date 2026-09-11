@@ -61,6 +61,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   await sql`DELETE FROM responses WHERE question_id = ${id}`;
   await sql`DELETE FROM word_responses WHERE question_id = ${id}`;
   await sql`DELETE FROM text_responses WHERE question_id = ${id}`;
+  await sql`DELETE FROM ranking_responses WHERE question_id = ${id}`;
 
   const rows = await sql`DELETE FROM questions WHERE id = ${id} RETURNING id`;
   if (rows.length === 0)

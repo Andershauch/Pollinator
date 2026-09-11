@@ -51,3 +51,38 @@ export function isValidTextAnswer(raw: string): boolean {
   const trimmed = raw.trim();
   return trimmed.length > 0 && trimmed.length <= MAX_TEXT_ANSWER_LENGTH;
 }
+
+export type RankingItem = { index: number; label: string; points: number };
+
+export type RankingResult = { ranking: RankingItem[]; total: number };
+
+/**
+ * Borda-count a set of full rankings: each participant's array is their option_index
+ * values ordered by preference (index 0 = their top choice). For N options, 1st choice
+ * scores N points, 2nd scores N-1, ..., last scores 1. Ties preserve the original option
+ * order (Array.prototype.sort is stable).
+ */
+export function tallyRanking(options: string[], rankings: number[][]): RankingResult {
+  const n = options.length;
+  const points = new Array(n).fill(0);
+  for (const ranking of rankings) {
+    ranking.forEach((optionIndex, position) => {
+      points[optionIndex] += n - position;
+    });
+  }
+  const ranking: RankingItem[] = options
+    .map((label, index) => ({ index, label, points: points[index] }))
+    .sort((a, b) => b.points - a.points);
+  return { ranking, total: rankings.length };
+}
+
+/** A ranking is valid if it's a permutation of every option index exactly once. */
+export function isValidRanking(raw: unknown, optionCount: number): raw is number[] {
+  if (!Array.isArray(raw) || raw.length !== optionCount) return false;
+  const seen = new Set<number>();
+  for (const v of raw) {
+    if (!Number.isInteger(v) || v < 0 || v >= optionCount || seen.has(v)) return false;
+    seen.add(v);
+  }
+  return true;
+}

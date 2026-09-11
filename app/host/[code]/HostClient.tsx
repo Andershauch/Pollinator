@@ -7,7 +7,7 @@ import s from "./host.module.css";
 
 type BankQuestion = {
   prompt: string;
-  type: "dilemma" | "wordcloud" | "scale" | "text";
+  type: "dilemma" | "wordcloud" | "scale" | "text" | "ranking";
   options: string[];
   times_used: number;
 };
@@ -23,7 +23,7 @@ type SessionSummary = {
 type SessionQuestion = {
   id: string;
   prompt: string;
-  type: "dilemma" | "wordcloud" | "scale" | "text";
+  type: "dilemma" | "wordcloud" | "scale" | "text" | "ranking";
   options: string[];
   position: number;
 };
@@ -36,7 +36,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud" | "scale" | "text";
+  type: "dilemma" | "wordcloud" | "scale" | "text" | "ranking";
   scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
@@ -130,7 +130,7 @@ export default function HostClient({ code }: { code: string }) {
   const [error, setError] = useState("");
 
   // Add-question form state
-  const [qType, setQType] = useState<"dilemma" | "wordcloud" | "scale" | "text">("dilemma");
+  const [qType, setQType] = useState<"dilemma" | "wordcloud" | "scale" | "text" | "ranking">("dilemma");
   const [scaleLowLabel, setScaleLowLabel] = useState("Slet ikke");
   const [scaleHighLabel, setScaleHighLabel] = useState("Fuldstændig");
   const [scaleMax, setScaleMax] = useState(10);
@@ -257,7 +257,7 @@ export default function HostClient({ code }: { code: string }) {
     setEditDuration(q.duration_seconds);
     setEditMediaUrl(q.media_url ?? "");
     setEditMediaType((q.media_type as "image" | "video") ?? "");
-    if (q.type === "dilemma") {
+    if (q.type === "dilemma" || q.type === "ranking") {
       setEditOptions(q.options);
     } else if (q.type === "scale") {
       setEditLowLabel(q.options[0] ?? "");
@@ -274,7 +274,7 @@ export default function HostClient({ code }: { code: string }) {
     if (!editPrompt.trim()) return;
     setEditSaving(true);
     try {
-      const options = q.type === "dilemma"
+      const options = q.type === "dilemma" || q.type === "ranking"
         ? editOptions.map((o) => o.trim()).filter(Boolean)
         : q.type === "scale"
         ? [editLowLabel.trim(), editHighLabel.trim()]
@@ -364,7 +364,7 @@ export default function HostClient({ code }: { code: string }) {
   function applyFromBank(q: BankQuestion | SessionQuestion) {
     setQType(q.type);
     setPrompt(q.prompt);
-    if (q.type === "dilemma") {
+    if (q.type === "dilemma" || q.type === "ranking") {
       setOptions(q.options.length >= 2 ? q.options : DEFAULT_OPTIONS);
     } else if (q.type === "scale") {
       setScaleLowLabel(q.options[0] ?? "Slet ikke");
@@ -411,7 +411,7 @@ export default function HostClient({ code }: { code: string }) {
   }
 
   async function importSingleQuestion(q: SessionQuestion) {
-    const bodyOptions = q.type === "dilemma" ? q.options
+    const bodyOptions = q.type === "dilemma" || q.type === "ranking" ? q.options
       : q.type === "scale" ? q.options.slice(0, 2)
       : [];
     await fetch(`/api/sessions/${code}/questions`, {
@@ -455,7 +455,7 @@ export default function HostClient({ code }: { code: string }) {
     if (!trimmed) { setAddError("Prompt er påkrævet"); return; }
 
     let bodyOptions: string[] = [];
-    if (qType === "dilemma") {
+    if (qType === "dilemma" || qType === "ranking") {
       const validOpts = options.map((o) => o.trim()).filter(Boolean);
       if (validOpts.length < 2) { setAddError("Mindst 2 svarforslag"); return; }
       bodyOptions = validOpts;
@@ -597,7 +597,7 @@ export default function HostClient({ code }: { code: string }) {
                         rows={2}
                         autoFocus
                       />
-                      {q.type === "dilemma" && (
+                      {(q.type === "dilemma" || q.type === "ranking") && (
                         <div className={s.editOpts}>
                           {editOptions.map((opt, oi) => (
                             <div key={oi} className={s.optionRow} style={{ marginTop: 6 }}>
@@ -857,14 +857,14 @@ export default function HostClient({ code }: { code: string }) {
               <div>
                 <label className={s.label}>Type</label>
                 <div className={s.stateRow}>
-                  {(["dilemma", "scale", "wordcloud", "text"] as const).map((t) => (
+                  {(["dilemma", "scale", "wordcloud", "text", "ranking"] as const).map((t) => (
                     <button
                       key={t}
                       className={`${s.stateBtn}${qType === t ? ` ${s.on}` : ""}`}
                       onClick={() => setQType(t)}
                       type="button"
                     >
-                      {t === "dilemma" ? "Dilemma" : t === "scale" ? "Skala" : t === "wordcloud" ? "Ordsky" : "Fritekst"}
+                      {t === "dilemma" ? "Dilemma" : t === "scale" ? "Skala" : t === "wordcloud" ? "Ordsky" : t === "text" ? "Fritekst" : "Rangering"}
                     </button>
                   ))}
                 </div>
@@ -916,9 +916,9 @@ export default function HostClient({ code }: { code: string }) {
                 </>
               )}
 
-              {qType === "dilemma" && (
+              {(qType === "dilemma" || qType === "ranking") && (
                 <div>
-                  <label className={s.label}>Svarforslag</label>
+                  <label className={s.label}>{qType === "ranking" ? "Emner der skal rangeres" : "Svarforslag"}</label>
                   {options.map((opt, i) => (
                     <div key={i} className={s.optionRow} style={{ marginBottom: 8 }}>
                       <span
@@ -1004,7 +1004,7 @@ export default function HostClient({ code }: { code: string }) {
               {addError && <div className={s.error}>{addError}</div>}
 
               <div className={s.formFooter}>
-                {qType === "dilemma" && options.length < MAX_OPTIONS && (
+                {(qType === "dilemma" || qType === "ranking") && options.length < MAX_OPTIONS && (
                   <button className={s.addOptBtn} onClick={addOpt}>
                     + Tilføj option
                   </button>
@@ -1114,7 +1114,7 @@ export default function HostClient({ code }: { code: string }) {
                 {bank.map((q, i) => (
                   <button key={i} className={s.bankItem} onClick={() => applyFromBank(q)}>
                     <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
-                      {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : q.type === "text" ? "FRITEKST" : "DILEMMA"}
+                      {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : q.type === "text" ? "FRITEKST" : q.type === "ranking" ? "RANGERING" : "DILEMMA"}
                     </span>
                     <span className={s.bankPrompt}>{q.prompt}</span>
                     <span className={s.bankUsed}>{q.times_used}×</span>
@@ -1170,7 +1170,7 @@ export default function HostClient({ code }: { code: string }) {
                               {[...qs].sort((a, b) => a.position - b.position).map((q) => (
                                 <div key={q.id} className={s.sessQ}>
                                   <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
-                                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : q.type === "text" ? "FRITEKST" : "DILEMMA"}
+                                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : q.type === "text" ? "FRITEKST" : q.type === "ranking" ? "RANGERING" : "DILEMMA"}
                                   </span>
                                   <span className={s.bankPrompt}>{q.prompt}</span>
                                   <button

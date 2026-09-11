@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import s from "./participant.module.css";
+
+const RankingInputScreen = dynamic(() => import("./RankingInputScreen"), { ssr: false });
 
 /* ── Konfetti ───────────────────────────────────────────────── */
 
@@ -25,7 +28,7 @@ function useConfetti() {
 
 /* ── Types ─────────────────────────────────────────────────── */
 
-type Question = {
+export type Question = {
   id: string;
   prompt: string;
   options: string[];
@@ -33,7 +36,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud" | "scale" | "text";
+  type: "dilemma" | "wordcloud" | "scale" | "text" | "ranking";
   scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
@@ -69,7 +72,7 @@ function fmtTime(sec: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function ParticipantTimer({ openedAt, durationSec }: { openedAt: string | null; durationSec: number | null }) {
+export function ParticipantTimer({ openedAt, durationSec }: { openedAt: string | null; durationSec: number | null }) {
   const remaining = useCountdown(openedAt, durationSec);
   if (remaining === null) return null;
   const urgent = remaining <= 30;
@@ -92,6 +95,7 @@ const PKEY = "pollinator_pkey";
 const VOTES = "pollinator_votes";
 const WORDS = "pollinator_words";
 const TEXT_ANSWERS = "pollinator_text";
+const RANKINGS = "pollinator_ranking";
 
 function getParticipantKey(): string {
   let k = localStorage.getItem(PKEY);
@@ -137,6 +141,16 @@ function persistTextAnswer(qid: string, answer: string) {
   localStorage.setItem(TEXT_ANSWERS, JSON.stringify(t));
 }
 
+function loadRankings(): Record<string, number[]> {
+  try { return JSON.parse(localStorage.getItem(RANKINGS) ?? "{}"); } catch { return {}; }
+}
+
+function persistRanking(qid: string, ranking: number[]) {
+  const r = loadRankings();
+  r[qid] = ranking;
+  localStorage.setItem(RANKINGS, JSON.stringify(r));
+}
+
 /* ── Shared small pieces ────────────────────────────────────── */
 
 function Brand() {
@@ -148,7 +162,7 @@ function Brand() {
   );
 }
 
-function TopBar({ right }: { right: React.ReactNode }) {
+export function TopBar({ right }: { right: React.ReactNode }) {
   return (
     <div className={s.topbar}>
       <Brand />
@@ -157,7 +171,7 @@ function TopBar({ right }: { right: React.ReactNode }) {
   );
 }
 
-function WaitingIndicator({ text }: { text: string }) {
+export function WaitingIndicator({ text }: { text: string }) {
   return (
     <div className={s.waiting}>
       <div className={s.dots}>
@@ -168,7 +182,7 @@ function WaitingIndicator({ text }: { text: string }) {
   );
 }
 
-function CheckRing({ sm = false }: { sm?: boolean }) {
+export function CheckRing({ sm = false }: { sm?: boolean }) {
   return (
     <div className={`${s.checkRing}${sm ? ` ${s.sm}` : ""}`}>
       <span className={s.check} />
@@ -178,7 +192,7 @@ function CheckRing({ sm = false }: { sm?: boolean }) {
 
 /* ── MediaBlock (deltager-visning) ──────────────────────────── */
 
-function MediaBlock({ url, type }: { url: string; type: string }) {
+export function MediaBlock({ url, type }: { url: string; type: string }) {
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -643,6 +657,44 @@ function TextSubmittedScreen({
   );
 }
 
+/* ── Screen: rangering afgivet ───────────────────────────────── */
+
+function RankingSubmittedScreen({
+  ranking,
+  qNum,
+  question,
+}: {
+  ranking: number[];
+  qNum: number;
+  question: Question;
+}) {
+  useConfetti();
+  return (
+    <div className={s.screen}>
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
+      <div className={s.main}>
+        <div className={s.submittedLabel} style={{ marginBottom: 14 }}>DU RANGEREDE</div>
+        <div className={s.rankList}>
+          {ranking.map((optionIndex, position) => (
+            <div key={optionIndex} className={s.rankRow}>
+              <span className={s.rankNum}>{position + 1}</span>
+              <span className={s.rankLabel}>{question.options[optionIndex]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={s.foot}>
+        <WaitingIndicator text="Venter på at spørgsmålet lukker" />
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────── */
 
 export default function ParticipantClient({ code }: { code: string }) {
@@ -651,13 +703,15 @@ export default function ParticipantClient({ code }: { code: string }) {
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [submittedWords, setSubmittedWords] = useState<Record<string, string[]>>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
+  const [rankings, setRankings] = useState<Record<string, number[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Hent gemte stemmer + ord + fritekst-svar fra localStorage ved mount
+  // Hent gemte stemmer + ord + fritekst-svar + rangeringer fra localStorage ved mount
   useEffect(() => {
     setVotes(loadVotes());
     setSubmittedWords(loadWords());
     setTextAnswers(loadTextAnswers());
+    setRankings(loadRankings());
   }, []);
 
   // Poll session hvert 2.5 sek
@@ -746,6 +800,27 @@ export default function ParticipantClient({ code }: { code: string }) {
     }
   }, [session, submitting]);
 
+  const handleRankingSubmit = useCallback(async (ranking: number[]) => {
+    if (!session?.current_question_id || submitting) return;
+    const qid = session.current_question_id;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/questions/${qid}/ranking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ranking, participant_key: getParticipantKey() }),
+      });
+
+      if (res.ok || res.status === 409) {
+        persistRanking(qid, ranking);
+        setRankings((r) => ({ ...r, [qid]: ranking }));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [session, submitting]);
+
   /* ── Render ─────────────────────────────────────────────── */
 
   if (status === "loading") return <LoadingScreen />;
@@ -810,6 +885,25 @@ export default function ParticipantClient({ code }: { code: string }) {
         qNum={qNum}
         submitting={submitting}
         onSubmit={handleTextSubmit}
+      />
+    );
+  }
+
+  // ── Rangering-flow ─────────────────────────────────────────
+  if (currentQ.type === "ranking") {
+    const ranking = rankings[currentQ.id];
+    if (ranking !== undefined) {
+      return (
+        <RankingSubmittedScreen ranking={ranking} qNum={qNum} question={currentQ} />
+      );
+    }
+    if (!currentQ.is_open) return <WaitingScreen />;
+    return (
+      <RankingInputScreen
+        question={currentQ}
+        qNum={qNum}
+        submitting={submitting}
+        onSubmit={handleRankingSubmit}
       />
     );
   }

@@ -68,3 +68,13 @@ CREATE TABLE IF NOT EXISTS text_responses (
   created_at       timestamptz NOT NULL DEFAULT now(),
   UNIQUE (question_id, participant_key)
 );
+
+-- Ranking responses (one full ranking per participant per question)
+CREATE TABLE IF NOT EXISTS ranking_responses (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id      uuid NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  ranking          jsonb NOT NULL,
+  participant_key  text NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (question_id, participant_key)
+);

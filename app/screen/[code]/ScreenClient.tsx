@@ -17,7 +17,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud" | "scale" | "text";
+  type: "dilemma" | "wordcloud" | "scale" | "text" | "ranking";
   scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
@@ -740,6 +740,86 @@ function TextAnswersScreen({
   );
 }
 
+/* ── Rangering screen ─────────────────────────────────────────── */
+
+type RankingItem = { index: number; label: string; points: number };
+
+function RankingBoard({ items }: { items: RankingItem[] }) {
+  const maxPoints = Math.max(1, ...items.map((i) => i.points));
+  return (
+    <div className={s.rankBoard}>
+      {items.map((item, i) => (
+        <div key={item.index} className={s.rankBoardRow}>
+          <div className={s.rankBoardPos}>{i + 1}</div>
+          <div className={s.rankBoardLabel}>{item.label}</div>
+          <div className={s.rankBoardTrack}>
+            <div
+              className={s.rankBoardFill}
+              style={{
+                width: `${Math.max((item.points / maxPoints) * 100, item.points > 0 ? 2 : 0)}%`,
+                background: COLORS_5[i % COLORS_5.length],
+              }}
+            />
+          </div>
+          <div className={s.rankBoardPoints}>{item.points}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const COLORS_5 = [
+  "oklch(0.82 0.155 78)",
+  "oklch(0.79 0.15 158)",
+  "oklch(0.75 0.14 200)",
+  "oklch(0.73 0.15 248)",
+  "oklch(0.72 0.165 330)",
+];
+
+function RankingScreen({
+  session,
+  ranking,
+}: {
+  session: Session;
+  ranking: { ranking: RankingItem[]; total: number };
+}) {
+  const qIdx = session.questions.findIndex((q) => q.id === session.current_question_id);
+  const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
+
+  return (
+    <div className={s.page}>
+      <TopBar
+        title={session.title}
+        right={
+          <>
+            {qIdx >= 0 && (
+              <span>SPØRGSMÅL {qIdx + 1} / {session.questions.length}</span>
+            )}
+            {currentQ?.is_open ? (
+              <ScreenTimer openedAt={currentQ.opened_at} durationSec={currentQ.duration_seconds} />
+            ) : (
+              <span className={s.closedBadge}>LUKKET</span>
+            )}
+            <LiveTag />
+          </>
+        }
+      />
+      <div className={s.body} style={{ alignItems: "flex-start" }}>
+        <div className={s.resultsWrap}>
+          {currentQ?.media_url && currentQ.media_type && (
+            <MediaBanner url={currentQ.media_url} type={currentQ.media_type} />
+          )}
+          <h1 className={s.questionText}>{currentQ?.prompt ?? ""}</h1>
+          <RankingBoard items={ranking.ranking} />
+          <div className={s.totalLine}>
+            {ranking.total} {ranking.total === 1 ? "rangering" : "rangeringer"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Closed / idle ──────────────────────────────────────────── */
 
 function IdleScreen({ message, sub }: { message: string; sub: string }) {
@@ -763,6 +843,7 @@ export default function ScreenClient({ code }: { code: string }) {
   const [results, setResults] = useState<Results | null>(null);
   const [words, setWords] = useState<WordEntry[] | null>(null);
   const [textAnswers, setTextAnswers] = useState<TextEntry[] | null>(null);
+  const [rankingResults, setRankingResults] = useState<{ ranking: RankingItem[]; total: number } | null>(null);
   const [origin, setOrigin] = useState("");
 
   // Kun tilgængeligt i browser
@@ -838,6 +919,29 @@ export default function ScreenClient({ code }: { code: string }) {
     return () => { mounted = false; clearInterval(id); };
   }, [session?.current_question_id]);
 
+  // Poll rangering hvert 1.5 sek når aktivt spørgsmål er af type ranking
+  useEffect(() => {
+    const q = session?.questions.find((q) => q.id === session.current_question_id);
+    if (!session?.current_question_id || q?.type !== "ranking") {
+      setRankingResults(null);
+      return;
+    }
+    const qid = session.current_question_id;
+    let mounted = true;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/questions/${qid}/ranking`);
+        if (!res.ok || !mounted) return;
+        const data: { ranking: RankingItem[]; total: number } = await res.json();
+        if (mounted) setRankingResults(data);
+      } catch { /* silent */ }
+    };
+    setRankingResults(null);
+    poll();
+    const id = setInterval(poll, 1500);
+    return () => { mounted = false; clearInterval(id); };
+  }, [session?.current_question_id]);
+
   // Poll results hvert 1.5 sek når der er et aktivt spørgsmål
   useEffect(() => {
     if (!session?.current_question_id) {
@@ -898,6 +1002,8 @@ export default function ScreenClient({ code }: { code: string }) {
     screenContent = <ResultsScreen session={session} results={results} />;
   } else if (session.current_question_id && activeQ?.type === "text" && textAnswers !== null) {
     screenContent = <TextAnswersScreen session={session} answers={textAnswers} />;
+  } else if (session.current_question_id && activeQ?.type === "ranking" && rankingResults !== null) {
+    screenContent = <RankingScreen session={session} ranking={rankingResults} />;
   } else {
     screenContent = <LobbyScreen session={session} joinUrl={joinUrl} />;
   }
