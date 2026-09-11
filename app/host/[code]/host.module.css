@@ -362,6 +362,7 @@
 
 .stateBtn {
   flex: 1;
+  min-width: 0;
   padding: 8px 4px;
   border-radius: 7px;
   border: none;
@@ -373,11 +374,24 @@
   letter-spacing: 0.14em;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stateBtn.on {
   background: var(--panel);
   color: var(--fg);
+}
+
+/* Type-selector row has more items than the 3-way session-state row,
+   so it wraps instead of squeezing every label into one line. */
+.typeRow {
+  flex-wrap: wrap;
+}
+
+.typeRowBtn {
+  flex: 1 1 30%;
 }
 
 /* ── Add question form ───────────────────────────────────── */

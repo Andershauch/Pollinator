@@ -61,6 +61,7 @@ const OPT_COLORS = [
 ];
 
 const DEFAULT_OPTIONS = ["Enig", "Uenig", "Ved ikke"];
+const DEFAULT_RANKING_OPTIONS = ["Emne 1", "Emne 2", "Emne 3"];
 const MAX_OPTIONS = 8;
 const SCALE_MAX_OPTIONS = [5, 10, 20, 50, 100];
 
@@ -498,6 +499,21 @@ export default function HostClient({ code }: { code: string }) {
     }
   }
 
+  /* ── Type-vælger ─────────────────────────────────────────── */
+
+  // Options-feltet deles mellem dilemma og rangering. Skift til rangering med
+  // uberørte dilemma-svar ("Enig/Uenig/Ved ikke") giver ikke mening som emner
+  // der skal rangeres — byt til generiske emne-navne, men kun hvis brugeren
+  // ikke selv har rettet i dem, så vi ikke overskriver deres tekst.
+  function selectQType(t: "dilemma" | "wordcloud" | "scale" | "text" | "ranking") {
+    if (t === "ranking" && JSON.stringify(options) === JSON.stringify(DEFAULT_OPTIONS)) {
+      setOptions(DEFAULT_RANKING_OPTIONS);
+    } else if (t === "dilemma" && JSON.stringify(options) === JSON.stringify(DEFAULT_RANKING_OPTIONS)) {
+      setOptions(DEFAULT_OPTIONS);
+    }
+    setQType(t);
+  }
+
   /* ── Option editing ──────────────────────────────────────── */
 
   const setOpt = (i: number, val: string) =>
@@ -856,12 +872,12 @@ export default function HostClient({ code }: { code: string }) {
 
               <div>
                 <label className={s.label}>Type</label>
-                <div className={s.stateRow}>
+                <div className={`${s.stateRow} ${s.typeRow}`}>
                   {(["dilemma", "scale", "wordcloud", "text", "ranking"] as const).map((t) => (
                     <button
                       key={t}
-                      className={`${s.stateBtn}${qType === t ? ` ${s.on}` : ""}`}
-                      onClick={() => setQType(t)}
+                      className={`${s.stateBtn} ${s.typeRowBtn}${qType === t ? ` ${s.on}` : ""}`}
+                      onClick={() => selectQType(t)}
                       type="button"
                     >
                       {t === "dilemma" ? "Dilemma" : t === "scale" ? "Skala" : t === "wordcloud" ? "Ordsky" : t === "text" ? "Fritekst" : "Rangering"}
@@ -875,7 +891,13 @@ export default function HostClient({ code }: { code: string }) {
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Hvad er dit dilemma…"
+                  placeholder={
+                    qType === "scale" ? "Hvad vil du gerne have vurderet…"
+                    : qType === "wordcloud" ? "Hvad skal deltagerne beskrive med ord…"
+                    : qType === "text" ? "Hvad vil du gerne spørge om…"
+                    : qType === "ranking" ? "Hvad skal deltagerne rangere…"
+                    : "Hvad er dit dilemma…"
+                  }
                   className={s.input}
                   rows={3}
                 />
