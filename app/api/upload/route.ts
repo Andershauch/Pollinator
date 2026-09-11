@@ -40,8 +40,9 @@ export async function POST(req: NextRequest) {
           { headers: CORS }
         );
       } catch (err) {
+        console.error("blob.generate-client-token failed:", err);
         return NextResponse.json(
-          { error: String(err) },
+          { error: "Kunne ikke generere upload-token" },
           { status: 500, headers: CORS }
         );
       }

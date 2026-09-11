@@ -44,6 +44,11 @@ ALTER TABLE questions ADD COLUMN IF NOT EXISTS duration_seconds int DEFAULT NULL
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS opened_at timestamptz DEFAULT NULL;
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'dilemma';
 
+-- Idempotent: add media (Slides add-on) + scale-question columns to existing databases
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS media_url  text;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS media_type text;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS scale_max  integer DEFAULT 10;
+
 -- Word cloud responses (multiple words per participant per question)
 CREATE TABLE IF NOT EXISTS word_responses (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
