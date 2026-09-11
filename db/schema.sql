@@ -58,3 +58,13 @@ CREATE TABLE IF NOT EXISTS word_responses (
   created_at      timestamptz NOT NULL DEFAULT now(),
   UNIQUE (question_id, participant_key, word)
 );
+
+-- Open-ended free-text responses (one answer per participant per question)
+CREATE TABLE IF NOT EXISTS text_responses (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id      uuid NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  answer           text NOT NULL,
+  participant_key  text NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (question_id, participant_key)
+);

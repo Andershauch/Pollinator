@@ -29,6 +29,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
         `;
         const total = (words as { count: number }[]).reduce((s, w) => s + w.count, 0);
         return { ...q, words, total };
+      } else if (q.type === "text") {
+        const textAnswers = await sql`
+          SELECT answer, created_at
+          FROM text_responses
+          WHERE question_id = ${q.id as string}
+          ORDER BY created_at ASC
+        `;
+        return { ...q, textAnswers, total: textAnswers.length };
       } else {
         const counts = (await sql`
           SELECT option_index, COUNT(*)::int AS votes

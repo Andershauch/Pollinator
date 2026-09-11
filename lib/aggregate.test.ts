@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tallyDilemma, tallyScale, normalizeWord } from "./aggregate";
+import { tallyDilemma, tallyScale, normalizeWord, isValidTextAnswer, MAX_TEXT_ANSWER_LENGTH } from "./aggregate";
 
 describe("tallyDilemma", () => {
   it("builds one bucket per option, defaulting to zero votes", () => {
@@ -100,5 +100,32 @@ describe("normalizeWord", () => {
 
   it("treats differently-cased/whitespaced input as the same word", () => {
     expect(normalizeWord(" Trivsel")).toBe(normalizeWord("trivsel "));
+  });
+});
+
+describe("isValidTextAnswer", () => {
+  it("rejects an empty string", () => {
+    expect(isValidTextAnswer("")).toBe(false);
+  });
+
+  it("rejects a whitespace-only string", () => {
+    expect(isValidTextAnswer("   \n\t  ")).toBe(false);
+  });
+
+  it("accepts ordinary text", () => {
+    expect(isValidTextAnswer("Jeg bruger for meget tid på at sortere papirer")).toBe(true);
+  });
+
+  it("accepts an answer exactly at the max length", () => {
+    expect(isValidTextAnswer("a".repeat(MAX_TEXT_ANSWER_LENGTH))).toBe(true);
+  });
+
+  it("rejects an answer one character over the max length", () => {
+    expect(isValidTextAnswer("a".repeat(MAX_TEXT_ANSWER_LENGTH + 1))).toBe(false);
+  });
+
+  it("measures length after trimming surrounding whitespace", () => {
+    const padded = "  " + "a".repeat(MAX_TEXT_ANSWER_LENGTH) + "  ";
+    expect(isValidTextAnswer(padded)).toBe(true);
   });
 });

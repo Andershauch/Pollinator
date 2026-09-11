@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { code } = await params;
   const { prompt, options, position, duration_seconds, type, media_url, media_type, scale_max } = await req.json();
 
-  const qtype = type === "wordcloud" ? "wordcloud" : type === "scale" ? "scale" : "dilemma";
+  const qtype = type === "wordcloud" ? "wordcloud" : type === "scale" ? "scale" : type === "text" ? "text" : "dilemma";
   const needsOptions = qtype === "dilemma";
 
   if (!prompt?.trim()) {

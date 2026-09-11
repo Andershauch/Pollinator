@@ -453,6 +453,52 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* ── Fritekst input ──────────────────────────────────────── */
+
+.textArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 0 6px;
+}
+
+.textInput {
+  width: 100%;
+  background: var(--panel);
+  border: 1.5px solid var(--line-2);
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--fg);
+  outline: none;
+  resize: none;
+  transition: border-color 0.15s;
+}
+
+.textInput:focus { border-color: var(--c1); }
+
+.textCounter {
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+
+.textAnswerBubble {
+  width: 100%;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1.5px solid var(--line-2);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
 /* ── Scale / slider ─────────────────────────────────────── */
 
 .scaleArea {

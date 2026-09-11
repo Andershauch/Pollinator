@@ -42,3 +42,12 @@ export function tallyScale(scaleMax: number, counts: VoteCount[]): ScaleResult {
 export function normalizeWord(word: string): string {
   return word.trim().toLowerCase();
 }
+
+/** Max length (in characters) for an open-ended free-text answer. */
+export const MAX_TEXT_ANSWER_LENGTH = 300;
+
+/** A free-text answer is valid if it's non-empty after trimming and within the length limit. */
+export function isValidTextAnswer(raw: string): boolean {
+  const trimmed = raw.trim();
+  return trimmed.length > 0 && trimmed.length <= MAX_TEXT_ANSWER_LENGTH;
+}

@@ -11,15 +11,17 @@ const COLORS = [
 
 type TallyItem = { index: number; label: string; votes: number; pct: number };
 type WordItem = { word: string; count: number };
+type TextAnswerItem = { answer: string; created_at: string };
 
 type Question = {
   id: string;
   prompt: string;
-  type: "dilemma" | "wordcloud" | "scale";
+  type: "dilemma" | "wordcloud" | "scale" | "text";
   position: number;
   total: number;
   tally?: TallyItem[];
   words?: WordItem[];
+  textAnswers?: TextAnswerItem[];
   average?: number;
   lowLabel?: string;
   highLabel?: string;
@@ -38,7 +40,7 @@ function buildCSV(session: Session, questions: Question[]): string {
   ];
 
   const typeName = (type: string) =>
-    type === "wordcloud" ? "Ordsky" : type === "scale" ? "Skala" : "Dilemma";
+    type === "wordcloud" ? "Ordsky" : type === "scale" ? "Skala" : type === "text" ? "Fritekst" : "Dilemma";
 
   questions.forEach((q, i) => {
     lines.push(`Spørgsmål ${i + 1} (${typeName(q.type)}):,"${q.prompt}"`);
@@ -53,6 +55,9 @@ function buildCSV(session: Session, questions: Question[]): string {
     } else if (q.type === "wordcloud" && q.words) {
       lines.push("Ord,Antal");
       q.words.forEach((w) => lines.push(`"${w.word}",${w.count}`));
+    } else if (q.type === "text" && q.textAnswers) {
+      lines.push("Svar");
+      q.textAnswers.forEach((a) => lines.push(`"${a.answer.replace(/"/g, '""')}"`));
     }
     lines.push("");
   });
@@ -173,6 +178,22 @@ function ScaleResult({
   );
 }
 
+/* ── Fritekst-svar ──────────────────────────────────────────── */
+
+function TextAnswerResult({ answers, total }: { answers: TextAnswerItem[]; total: number }) {
+  return (
+    <div className={s.textAnswerList}>
+      {answers.map((a, i) => (
+        <div key={i} className={s.textAnswerRow}>
+          <span className={s.textAnswerNum}>{i + 1}</span>
+          <span className={s.textAnswerText}>{a.answer}</span>
+        </div>
+      ))}
+      <div className={s.totalNote}>{total} svar i alt</div>
+    </div>
+  );
+}
+
 /* ── Main ───────────────────────────────────────────────────── */
 
 export default function ReportClient({
@@ -215,7 +236,7 @@ export default function ReportClient({
             <div className={s.cardHead}>
               <span className={s.qNum}>{i + 1}</span>
               <span className={s.qTypeBadge}>
-                {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA 1–10" : "DILEMMA"}
+                {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA 1–10" : q.type === "text" ? "FRITEKST" : "DILEMMA"}
               </span>
               <h2 className={s.qPrompt}>{q.prompt}</h2>
             </div>
@@ -234,6 +255,9 @@ export default function ReportClient({
               )}
               {q.type === "wordcloud" && q.words && (
                 <WordResult words={q.words} total={q.total} />
+              )}
+              {q.type === "text" && q.textAnswers && (
+                <TextAnswerResult answers={q.textAnswers} total={q.total} />
               )}
               {q.total === 0 && (
                 <p className={s.noData}>Ingen svar registreret</p>

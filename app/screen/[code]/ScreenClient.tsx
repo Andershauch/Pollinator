@@ -17,7 +17,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud" | "scale";
+  type: "dilemma" | "wordcloud" | "scale" | "text";
   scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
@@ -682,6 +682,64 @@ function WordCloudScreen({
   );
 }
 
+/* ── Fritekst-svar screen ─────────────────────────────────────── */
+
+type TextEntry = { id: string; answer: string; created_at: string };
+
+function TextAnswersScreen({
+  session,
+  answers,
+}: {
+  session: Session;
+  answers: TextEntry[];
+}) {
+  const qIdx = session.questions.findIndex((q) => q.id === session.current_question_id);
+  const currentQ = session.questions.find((q) => q.id === session.current_question_id) ?? null;
+
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [answers.length]);
+
+  return (
+    <div className={s.page}>
+      <TopBar
+        title={session.title}
+        right={
+          <>
+            {qIdx >= 0 && (
+              <span>SPØRGSMÅL {qIdx + 1} / {session.questions.length}</span>
+            )}
+            {currentQ?.is_open && (
+              <ScreenTimer openedAt={currentQ.opened_at} durationSec={currentQ.duration_seconds} />
+            )}
+            <LiveTag />
+          </>
+        }
+      />
+      <div className={s.body} style={{ alignItems: "stretch" }}>
+        <div className={s.resultsWrap} style={{ flex: 1 }}>
+          {currentQ?.media_url && currentQ.media_type && (
+            <MediaBanner url={currentQ.media_url} type={currentQ.media_type} />
+          )}
+          <h1 className={s.questionText}>{currentQ?.prompt ?? ""}</h1>
+          <div className={s.textTicker} ref={listRef}>
+            {answers.length === 0 ? (
+              <span className={s.idleSub}>Venter på svar…</span>
+            ) : (
+              answers.map((a) => (
+                <div key={a.id} className={s.textTickerRow}>{a.answer}</div>
+              ))
+            )}
+          </div>
+          <div className={s.totalLine}>{answers.length} {answers.length === 1 ? "svar" : "svar"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Closed / idle ──────────────────────────────────────────── */
 
 function IdleScreen({ message, sub }: { message: string; sub: string }) {
@@ -704,6 +762,7 @@ export default function ScreenClient({ code }: { code: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [results, setResults] = useState<Results | null>(null);
   const [words, setWords] = useState<WordEntry[] | null>(null);
+  const [textAnswers, setTextAnswers] = useState<TextEntry[] | null>(null);
   const [origin, setOrigin] = useState("");
 
   // Kun tilgængeligt i browser
@@ -751,6 +810,29 @@ export default function ScreenClient({ code }: { code: string }) {
       } catch { /* silent */ }
     };
     setWords(null);
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => { mounted = false; clearInterval(id); };
+  }, [session?.current_question_id]);
+
+  // Poll fritekst-svar hvert 2 sek når aktivt spørgsmål er af type text
+  useEffect(() => {
+    const q = session?.questions.find((q) => q.id === session.current_question_id);
+    if (!session?.current_question_id || q?.type !== "text") {
+      setTextAnswers(null);
+      return;
+    }
+    const qid = session.current_question_id;
+    let mounted = true;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/questions/${qid}/text`);
+        if (!res.ok || !mounted) return;
+        const data: TextEntry[] = await res.json();
+        if (mounted) setTextAnswers(data);
+      } catch { /* silent */ }
+    };
+    setTextAnswers(null);
     poll();
     const id = setInterval(poll, 2000);
     return () => { mounted = false; clearInterval(id); };
@@ -814,6 +896,8 @@ export default function ScreenClient({ code }: { code: string }) {
     screenContent = <ScaleScreen session={session} results={results} />;
   } else if (session.current_question_id && activeQ?.type === "dilemma" && results) {
     screenContent = <ResultsScreen session={session} results={results} />;
+  } else if (session.current_question_id && activeQ?.type === "text" && textAnswers !== null) {
+    screenContent = <TextAnswersScreen session={session} answers={textAnswers} />;
   } else {
     screenContent = <LobbyScreen session={session} joinUrl={joinUrl} />;
   }

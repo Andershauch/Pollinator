@@ -365,6 +365,37 @@
   letter-spacing: 0.06em;
 }
 
+/* ── Fritekst-svar ──────────────────────────────────────────── */
+
+.textAnswerList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.textAnswerRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-radius: 8px;
+}
+
+.textAnswerNum {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--faint);
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.textAnswerText {
+  font-size: 15px;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
 /* ── Print ───────────────────────────────────────────────── */
 
 @media print {
@@ -377,4 +408,6 @@
   .meta, .totalNote, .noData { color: #666; }
   .qPrompt, .tallyPct { color: #111; }
   .tallyLabel, .wordText, .wordCount, .tallyVotes { color: #444; }
+  .textAnswerRow { background: #f2f2f2; }
+  .textAnswerText, .textAnswerNum { color: #222; }
 }

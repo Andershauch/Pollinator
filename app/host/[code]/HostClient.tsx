@@ -7,7 +7,7 @@ import s from "./host.module.css";
 
 type BankQuestion = {
   prompt: string;
-  type: "dilemma" | "wordcloud" | "scale";
+  type: "dilemma" | "wordcloud" | "scale" | "text";
   options: string[];
   times_used: number;
 };
@@ -23,7 +23,7 @@ type SessionSummary = {
 type SessionQuestion = {
   id: string;
   prompt: string;
-  type: "dilemma" | "wordcloud" | "scale";
+  type: "dilemma" | "wordcloud" | "scale" | "text";
   options: string[];
   position: number;
 };
@@ -36,7 +36,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud" | "scale";
+  type: "dilemma" | "wordcloud" | "scale" | "text";
   scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
@@ -130,7 +130,7 @@ export default function HostClient({ code }: { code: string }) {
   const [error, setError] = useState("");
 
   // Add-question form state
-  const [qType, setQType] = useState<"dilemma" | "wordcloud" | "scale">("dilemma");
+  const [qType, setQType] = useState<"dilemma" | "wordcloud" | "scale" | "text">("dilemma");
   const [scaleLowLabel, setScaleLowLabel] = useState("Slet ikke");
   const [scaleHighLabel, setScaleHighLabel] = useState("Fuldstændig");
   const [scaleMax, setScaleMax] = useState(10);
@@ -716,6 +716,8 @@ export default function HostClient({ code }: { code: string }) {
                         ? <span className={`${s.badge} ${s.shut}`} style={{ fontSize: 10 }}>ORDSKY</span>
                         : q.type === "scale"
                         ? <span className={`${s.badge} ${s.shut}`} style={{ fontSize: 10 }}>SKALA 1–10</span>
+                        : q.type === "text"
+                        ? <span className={`${s.badge} ${s.shut}`} style={{ fontSize: 10 }}>FRITEKST</span>
                         : q.options.join(" · ")}
                     </div>
                     {isCurrent && (
@@ -855,14 +857,14 @@ export default function HostClient({ code }: { code: string }) {
               <div>
                 <label className={s.label}>Type</label>
                 <div className={s.stateRow}>
-                  {(["dilemma", "scale", "wordcloud"] as const).map((t) => (
+                  {(["dilemma", "scale", "wordcloud", "text"] as const).map((t) => (
                     <button
                       key={t}
                       className={`${s.stateBtn}${qType === t ? ` ${s.on}` : ""}`}
                       onClick={() => setQType(t)}
                       type="button"
                     >
-                      {t === "dilemma" ? "Dilemma" : t === "scale" ? "Skala" : "Ordsky"}
+                      {t === "dilemma" ? "Dilemma" : t === "scale" ? "Skala" : t === "wordcloud" ? "Ordsky" : "Fritekst"}
                     </button>
                   ))}
                 </div>
@@ -877,6 +879,9 @@ export default function HostClient({ code }: { code: string }) {
                   className={s.input}
                   rows={3}
                 />
+                {qType === "text" && (
+                  <div className={s.hint}>Deltagere kan svare med op til 300 tegn fritekst.</div>
+                )}
               </div>
 
               {qType === "scale" && (
@@ -1109,7 +1114,7 @@ export default function HostClient({ code }: { code: string }) {
                 {bank.map((q, i) => (
                   <button key={i} className={s.bankItem} onClick={() => applyFromBank(q)}>
                     <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
-                      {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : "DILEMMA"}
+                      {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : q.type === "text" ? "FRITEKST" : "DILEMMA"}
                     </span>
                     <span className={s.bankPrompt}>{q.prompt}</span>
                     <span className={s.bankUsed}>{q.times_used}×</span>
@@ -1165,7 +1170,7 @@ export default function HostClient({ code }: { code: string }) {
                               {[...qs].sort((a, b) => a.position - b.position).map((q) => (
                                 <div key={q.id} className={s.sessQ}>
                                   <span className={`${s.bankBadge} ${s[`bankBadge_${q.type}`]}`}>
-                                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : "DILEMMA"}
+                                    {q.type === "wordcloud" ? "ORDSKY" : q.type === "scale" ? "SKALA" : q.type === "text" ? "FRITEKST" : "DILEMMA"}
                                   </span>
                                   <span className={s.bankPrompt}>{q.prompt}</span>
                                   <button

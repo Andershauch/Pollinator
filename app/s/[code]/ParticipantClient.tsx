@@ -33,7 +33,7 @@ type Question = {
   is_open: boolean;
   duration_seconds: number | null;
   opened_at: string | null;
-  type: "dilemma" | "wordcloud" | "scale";
+  type: "dilemma" | "wordcloud" | "scale" | "text";
   scale_max?: number | null;
   media_url?: string | null;
   media_type?: string | null;
@@ -91,6 +91,7 @@ const color = (i: number) => COLORS[i % COLORS.length];
 const PKEY = "pollinator_pkey";
 const VOTES = "pollinator_votes";
 const WORDS = "pollinator_words";
+const TEXT_ANSWERS = "pollinator_text";
 
 function getParticipantKey(): string {
   let k = localStorage.getItem(PKEY);
@@ -124,6 +125,16 @@ function persistWord(qid: string, word: string) {
   if (!w[qid]) w[qid] = [];
   if (!w[qid].includes(word)) w[qid].push(word);
   localStorage.setItem(WORDS, JSON.stringify(w));
+}
+
+function loadTextAnswers(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(TEXT_ANSWERS) ?? "{}"); } catch { return {}; }
+}
+
+function persistTextAnswer(qid: string, answer: string) {
+  const t = loadTextAnswers();
+  t[qid] = answer;
+  localStorage.setItem(TEXT_ANSWERS, JSON.stringify(t));
 }
 
 /* ── Shared small pieces ────────────────────────────────────── */
@@ -546,6 +557,92 @@ function WordCloudInputScreen({
   );
 }
 
+/* ── Screen: fritekst input ──────────────────────────────────── */
+
+const MAX_TEXT_LEN = 300;
+
+function TextInputScreen({
+  question,
+  qNum,
+  submitting,
+  onSubmit,
+}: {
+  question: Question;
+  qNum: number;
+  submitting: boolean;
+  onSubmit: (answer: string) => void;
+}) {
+  const [answer, setAnswer] = useState("");
+  const trimmed = answer.trim();
+
+  return (
+    <div className={s.screen}>
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
+      <div className={s.qHead}>
+        {question.media_url && question.media_type && (
+          <MediaBlock url={question.media_url} type={question.media_type} />
+        )}
+        <h1 className={s.qText}>{question.prompt}</h1>
+      </div>
+      <div className={s.textArea}>
+        <textarea
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value.slice(0, MAX_TEXT_LEN))}
+          maxLength={MAX_TEXT_LEN}
+          placeholder="Skriv dit svar…"
+          className={s.textInput}
+          rows={4}
+          autoFocus
+          disabled={submitting}
+        />
+        <div className={s.textCounter}>{trimmed.length} / {MAX_TEXT_LEN}</div>
+        <button
+          className={s.scaleSubmit}
+          onClick={() => trimmed && onSubmit(trimmed)}
+          disabled={!trimmed || submitting}
+        >
+          {submitting ? "Sender…" : "Send svar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TextSubmittedScreen({
+  answer,
+  qNum,
+  question,
+}: {
+  answer: string;
+  qNum: number;
+  question: Question;
+}) {
+  useConfetti();
+  return (
+    <div className={s.screen}>
+      <TopBar right={
+        <div className={s.topRight}>
+          <span className={s.tag}>SPØRGSMÅL {qNum}</span>
+          <ParticipantTimer openedAt={question.opened_at} durationSec={question.duration_seconds} />
+        </div>
+      } />
+      <div className={`${s.main} ${s.center}`}>
+        <CheckRing sm />
+        <div className={s.submittedLabel}>DU SVAREDE</div>
+        <div className={s.textAnswerBubble}>{answer}</div>
+      </div>
+      <div className={s.foot}>
+        <WaitingIndicator text="Venter på at spørgsmålet lukker" />
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────── */
 
 export default function ParticipantClient({ code }: { code: string }) {
@@ -553,12 +650,14 @@ export default function ParticipantClient({ code }: { code: string }) {
   const [status, setStatus] = useState<"loading" | "notfound" | "ok">("loading");
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [submittedWords, setSubmittedWords] = useState<Record<string, string[]>>({});
+  const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Hent gemte stemmer + ord fra localStorage ved mount
+  // Hent gemte stemmer + ord + fritekst-svar fra localStorage ved mount
   useEffect(() => {
     setVotes(loadVotes());
     setSubmittedWords(loadWords());
+    setTextAnswers(loadTextAnswers());
   }, []);
 
   // Poll session hvert 2.5 sek
@@ -626,6 +725,27 @@ export default function ParticipantClient({ code }: { code: string }) {
     }
   }, [session]);
 
+  const handleTextSubmit = useCallback(async (answer: string) => {
+    if (!session?.current_question_id || submitting) return;
+    const qid = session.current_question_id;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/questions/${qid}/text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer, participant_key: getParticipantKey() }),
+      });
+
+      if (res.ok || res.status === 409) {
+        persistTextAnswer(qid, answer);
+        setTextAnswers((t) => ({ ...t, [qid]: answer }));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [session, submitting]);
+
   /* ── Render ─────────────────────────────────────────────── */
 
   if (status === "loading") return <LoadingScreen />;
@@ -671,6 +791,25 @@ export default function ParticipantClient({ code }: { code: string }) {
         qNum={qNum}
         submitting={submitting}
         onVote={handleVote}
+      />
+    );
+  }
+
+  // ── Fritekst-flow ──────────────────────────────────────────
+  if (currentQ.type === "text") {
+    const textAnswer = textAnswers[currentQ.id];
+    if (textAnswer !== undefined) {
+      return (
+        <TextSubmittedScreen answer={textAnswer} qNum={qNum} question={currentQ} />
+      );
+    }
+    if (!currentQ.is_open) return <WaitingScreen />;
+    return (
+      <TextInputScreen
+        question={currentQ}
+        qNum={qNum}
+        submitting={submitting}
+        onSubmit={handleTextSubmit}
       />
     );
   }

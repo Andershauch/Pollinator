@@ -351,6 +351,39 @@
   justify-content: center;
 }
 
+/* ── Fritekst ticker ─────────────────────────────────────── */
+
+.textTicker {
+  width: 100%;
+  flex: 1;
+  min-height: 300px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 4px 4px 4px 0;
+  scroll-behavior: smooth;
+}
+
+.textTickerRow {
+  flex-shrink: 0;
+  padding: 16px 22px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  font-size: clamp(16px, 1.6vw, 22px);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--fg);
+  animation: textRowIn 0.4s ease both;
+}
+
+@keyframes textRowIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Consensus meter ─────────────────────────────────────── */
 
 .consensusMeter {
