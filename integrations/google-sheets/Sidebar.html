@@ -82,6 +82,8 @@
     .badge-dilemma   { background: #dcfce7; color: #166534; }
     .badge-scale     { background: #dbeafe; color: #1e40af; }
     .badge-wordcloud { background: #fef9c3; color: #854d0e; }
+    .badge-text      { background: #fce7f3; color: #9d174d; }
+    .badge-ranking   { background: #e0f2fe; color: #075985; }
 
     .code-big {
       font-size: 36px; font-weight: 800;
@@ -231,7 +233,7 @@
   function renderIdleQs() {
     const el = document.getElementById("idle-qs");
     if (!localQs.length) {
-      el.innerHTML = '<div style="color:#aaa;font-size:12px;">Ingen spørgsmål i arket.<br><br>Format: A = spørgsmål, B = type (dilemma/skala/ordsky), C = optioner (kommasep.).</div>';
+      el.innerHTML = '<div style="color:#aaa;font-size:12px;">Ingen spørgsmål i arket.<br><br>Format: A = spørgsmål, B = type (dilemma/skala/ordsky/tekst/rangering), C = optioner (kommasep.).</div>';
       return;
     }
     el.innerHTML = '<div class="q-list">' +
@@ -393,7 +395,30 @@
       document.getElementById("a-bars").innerHTML = top.length
         ? `<div style="font-size:13px;line-height:2;color:#555;">${top.map(w => `<b>${w.word}</b> (${w.count})`).join(" · ")}</div>`
         : `<div style="color:#aaa;font-size:12px;padding:8px 0;">Venter på ord…</div>`;
+    } else if (data.type === "ranking" && data.ranking?.length) {
+      const maxPoints = Math.max(1, ...data.ranking.map(item => item.points));
+      document.getElementById("a-bars").innerHTML = data.ranking.map((item, i) => {
+        const pct = Math.round((item.points / maxPoints) * 100);
+        return `<div class="bar-row">
+          <div class="bar-lbl" title="${item.label}">${(i + 1)}. ${item.label}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${COLORS[i%COLORS.length]}"></div></div>
+          <div class="bar-pct">${item.points}p</div>
+        </div>`;
+      }).join("");
+    } else if (data.type === "text") {
+      const recent = (data.answers || []).slice(-5).reverse();
+      document.getElementById("a-bars").innerHTML = recent.length
+        ? `<div style="font-size:12px;line-height:1.7;color:#555;">${recent.map(a => "• " + escapeHtml(a.answer)).join("<br>")}</div>`
+        : `<div style="color:#aaa;font-size:12px;padding:8px 0;">Venter på svar…</div>`;
     }
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   // ── Polling ───────────────────────────────────────────
@@ -416,6 +441,11 @@
       if (q.type === "wordcloud") {
         const words = await api("GET", `/api/questions/${q.id}/words`);
         data = { type: "wordcloud", words, total: words.reduce((s, w) => s + w.count, 0) };
+      } else if (q.type === "text") {
+        const answers = await api("GET", `/api/questions/${q.id}/text`);
+        data = { type: "text", answers, total: answers.length };
+      } else if (q.type === "ranking") {
+        data = await api("GET", `/api/questions/${q.id}/ranking`);
       } else {
         data = await api("GET", `/api/questions/${q.id}/results`);
       }
@@ -432,6 +462,12 @@
         const words = await api("GET", `/api/questions/${q.id}/words`);
         result = { question_id: q.id, prompt: q.prompt, type: "wordcloud",
           words, total: words.reduce((s, w) => s + w.count, 0) };
+      } else if (q.type === "text") {
+        const answers = await api("GET", `/api/questions/${q.id}/text`);
+        result = { question_id: q.id, prompt: q.prompt, type: "text",
+          textAnswers: answers, total: answers.length };
+      } else if (q.type === "ranking") {
+        result = await api("GET", `/api/questions/${q.id}/ranking`);
       } else {
         result = await api("GET", `/api/questions/${q.id}/results`);
       }
@@ -472,7 +508,7 @@
   }
 
   function qItem(num, prompt, type, itemCls, numCls) {
-    const names = { dilemma: "DILEMMA", scale: "SKALA", wordcloud: "ORDSKY" };
+    const names = { dilemma: "DILEMMA", scale: "SKALA", wordcloud: "ORDSKY", text: "FRITEKST", ranking: "RANGERING" };
     return `<div class="q-item ${itemCls}">
       <div class="q-num ${numCls}">${num}</div>
       <div class="q-text">${prompt}</div>

@@ -2,13 +2,13 @@
 // Indsæt denne kode i Apps Script (Extensions → Apps Script)
 //
 // Spørgsmålsformat — i speaker notes på hver slide:
-//   Linje 1: type  → dilemma  /  skala  /  ordsky
-//   Linje 2: optioner (kun dilemma/skala) → Ja, Nej, Ved ikke
+//   Linje 1: type  → dilemma  /  skala  /  ordsky  /  tekst  /  rangering
+//   Linje 2: optioner (dilemma/rangering/skala) → Ja, Nej, Ved ikke
 //   Linje 3: (kun skala) antal trin, f.eks. 20 eller 100
 //
 // Slides UDEN en anerkendt type i notes springes over.
 
-const POLLINATOR_URL = "https://pollinator-nine.vercel.app";
+const POLLINATOR_URL = "https://pollinator.hansendjurhuus.dk";
 
 // Virker både som bound script og som installeret add-on
 function onOpen(e) {
@@ -39,6 +39,8 @@ function getSlideQuestions() {
   const typeMap = {
     dilemma: "dilemma", skala: "scale", scale: "scale",
     ordsky: "wordcloud", wordcloud: "wordcloud",
+    tekst: "text", fritekst: "text", text: "text",
+    rangering: "ranking", ranking: "ranking",
   };
 
   for (const slide of slides) {
@@ -86,6 +88,11 @@ function getSlideQuestions() {
         ? optRaw.split(",").map(o => o.trim()).filter(Boolean)
         : ["Enig", "Uenig", "Ved ikke"];
       if (options.length < 2) options = ["Enig", "Uenig", "Ved ikke"];
+    } else if (type === "ranking") {
+      options = optRaw
+        ? optRaw.split(",").map(o => o.trim()).filter(Boolean)
+        : ["Emne 1", "Emne 2", "Emne 3"];
+      if (options.length < 2) options = ["Emne 1", "Emne 2", "Emne 3"];
     } else if (type === "scale") {
       const parts = optRaw.split(",").map(o => o.trim());
       options = [parts[0] || "", parts[1] || ""];
@@ -173,6 +180,10 @@ function writeResultsToSlides(resultsJson) {
       _renderDilemmaSlide(slide, q);
     } else if (q.type === "scale") {
       _renderScaleSlide(slide, q);
+    } else if (q.type === "ranking") {
+      _renderRankingSlide(slide, q);
+    } else if (q.type === "text") {
+      _renderTextSlide(slide, q);
     } else {
       _renderWordcloudSlide(slide, q);
     }
@@ -230,6 +241,42 @@ function _renderScaleSlide(slide, q) {
       _addText(slide, String(item.label ?? item.index), x, startY + areaH + 4, bW + 4, 14, 7, false, "#666680");
     }
   });
+}
+
+function _renderRankingSlide(slide, q) {
+  const ranking  = q.ranking || [];
+  const rowH     = Math.min(62, Math.floor(230 / Math.max(ranking.length, 1)));
+  const barH     = 18;
+  const maxPoints = Math.max(1, ...ranking.map(item => item.points));
+
+  ranking.forEach((item, i) => {
+    const barW  = Math.round((item.points / maxPoints) * 580);
+    const color = OPT_COLORS[i % OPT_COLORS.length];
+    const y     = 100 + i * rowH;
+
+    _addText(slide, (i + 1) + ". " + item.label, 40, y, 490, 22, 12, false, "#ccccdd");
+    _addText(slide, item.points + " point", 540, y, 100, 22, 13, true, color);
+    _addRect(slide, 40, y + 26, 580, barH, TRACK_HEX);
+    if (barW > 2) _addRect(slide, 40, y + 26, barW, barH, color);
+  });
+}
+
+function _renderTextSlide(slide, q) {
+  const answers = q.textAnswers || [];
+  const rowH    = 40;
+  const maxRows = 6;
+  const shown   = answers.slice(0, maxRows);
+
+  shown.forEach((a, i) => {
+    const y = 100 + i * rowH;
+    _addRect(slide, 40, y, 580, rowH - 8, TRACK_HEX);
+    _addText(slide, a.answer, 52, y + 6, 556, rowH - 16, 11, false, "#ccccdd");
+  });
+
+  if (answers.length > maxRows) {
+    const y = 100 + maxRows * rowH;
+    _addText(slide, "+ " + (answers.length - maxRows) + " flere svar", 40, y, 300, 20, 10, false, "#666680");
+  }
 }
 
 function _renderWordcloudSlide(slide, q) {

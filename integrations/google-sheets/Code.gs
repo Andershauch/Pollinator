@@ -1,7 +1,7 @@
 // Pollinator — Google Sheets Add-on
 // Indsæt denne kode i Apps Script (Extensions → Apps Script)
 
-const POLLINATOR_URL = "https://pollinator-nine.vercel.app";
+const POLLINATOR_URL = "https://pollinator.hansendjurhuus.dk";
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -18,7 +18,7 @@ function showSidebar() {
 }
 
 // Læser spørgsmål fra det aktive ark
-// Format: Kolonne A = prompt, B = type (dilemma/skala/ordsky), C = optioner (kommasepareret)
+// Format: Kolonne A = prompt, B = type (dilemma/skala/ordsky/tekst/rangering), C = optioner (kommasepareret, ikke ordsky/tekst)
 function getSheetQuestions() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const lastRow = sheet.getLastRow();
@@ -37,6 +37,8 @@ function getSheetQuestions() {
     const typeMap = {
       dilemma: "dilemma", skala: "scale", scale: "scale",
       ordsky: "wordcloud", wordcloud: "wordcloud",
+      tekst: "text", fritekst: "text", text: "text",
+      rangering: "ranking", ranking: "ranking",
     };
     const type = typeMap[typeDk] || "dilemma";
 
@@ -46,6 +48,11 @@ function getSheetQuestions() {
         ? optRaw.split(",").map(o => o.trim()).filter(Boolean)
         : ["Enig", "Uenig", "Ved ikke"];
       if (options.length < 2) options = ["Enig", "Uenig", "Ved ikke"];
+    } else if (type === "ranking") {
+      options = optRaw
+        ? optRaw.split(",").map(o => o.trim()).filter(Boolean)
+        : ["Emne 1", "Emne 2", "Emne 3"];
+      if (options.length < 2) options = ["Emne 1", "Emne 2", "Emne 3"];
     } else if (type === "scale") {
       const parts = optRaw.split(",").map(o => o.trim());
       options = [parts[0] || "Slet ikke", parts[1] || "Fuldstændig"];
@@ -84,6 +91,18 @@ function writeResults(resultsJson) {
       for (const item of (q.tally || [])) {
         const pct = q.total > 0 ? Math.round((item.votes / q.total) * 100) : 0;
         rows.push([first ? q.prompt : "", first ? "Dilemma" : "", item.label, item.votes, pct + "%"]);
+        first = false;
+      }
+    } else if (q.type === "ranking") {
+      let first = true;
+      for (const item of (q.ranking || [])) {
+        rows.push([first ? q.prompt : "", first ? "Rangering" : "", item.label, item.points, ""]);
+        first = false;
+      }
+    } else if (q.type === "text") {
+      let first = true;
+      for (const item of (q.textAnswers || [])) {
+        rows.push([first ? q.prompt : "", first ? "Fritekst" : "", item.answer, "", ""]);
         first = false;
       }
     } else {
