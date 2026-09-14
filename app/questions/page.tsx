@@ -3,6 +3,8 @@ import Link from "next/link";
 import CopyButton from "./CopyButton";
 import s from "./page.module.css";
 
+export const dynamic = "force-dynamic";
+
 type QuestionRow = {
   prompt: string;
   type: string;

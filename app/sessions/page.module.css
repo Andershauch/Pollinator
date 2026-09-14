@@ -117,6 +117,32 @@
   border: 1px solid transparent;
 }
 
+.stateBadge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.stateLobby {
+  color: var(--faint);
+  border-color: var(--line-2);
+}
+
+.stateActive {
+  background: color-mix(in oklch, var(--c2) 15%, transparent);
+  color: var(--c2);
+  border-color: color-mix(in oklch, var(--c2) 35%, transparent);
+}
+
+.stateClosed {
+  background: color-mix(in oklch, var(--c3) 15%, transparent);
+  color: var(--c3);
+  border-color: color-mix(in oklch, var(--c3) 35%, transparent);
+}
+
 .badgeCloud {
   background: color-mix(in oklch, var(--c1) 15%, transparent);
   color: var(--c1);

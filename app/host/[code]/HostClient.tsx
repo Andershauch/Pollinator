@@ -250,6 +250,25 @@ export default function HostClient({ code }: { code: string }) {
   const setSessionState = (state: Session["state"]) =>
     patchSession({ state });
 
+  async function resetResponses() {
+    if (!confirm("Nulstil alle svar for denne session?\n\nSessionen sættes tilbage til lobby, men koden, spørgsmål og medier bevares.")) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/sessions/${code}/reset`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Fejl"); return; }
+      setSession((s) => s ? {
+        ...s, ...data,
+        questions: s.questions.map((q) => ({ ...q, is_open: false, opened_at: null })),
+      } : s);
+    } catch {
+      setError("Netværksfejl");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   /* ── Edit / delete ───────────────────────────────────────── */
 
   function startEdit(q: Question) {
@@ -823,6 +842,19 @@ export default function HostClient({ code }: { code: string }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Nulstil svar (behold kode) */}
+          <div className={s.commandBlock}>
+            <div className={s.commandTitle}>Nulstil</div>
+            <button
+              className={`${s.btn} ${s.btnDanger} ${s.btnSmall}`}
+              onClick={resetResponses}
+              disabled={loading}
+            >
+              Nulstil svar (behold kode)
+            </button>
+            <div className={s.hint}>Sletter alle svar og sætter sessionen tilbage til lobby. Koden, spørgsmål og medier bevares.</div>
           </div>
 
           {/* Hurtighandlinger på aktivt spørgsmål */}

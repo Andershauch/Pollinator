@@ -26,8 +26,8 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   // Copy all questions from original session
   await sql`
-    INSERT INTO questions (session_id, prompt, type, options, position, duration_seconds)
-    SELECT ${newSession.id as string}, prompt, type, options, position, duration_seconds
+    INSERT INTO questions (session_id, prompt, type, options, position, duration_seconds, media_url, media_type, scale_max)
+    SELECT ${newSession.id as string}, prompt, type, options, position, duration_seconds, media_url, media_type, scale_max
     FROM questions
     WHERE session_id = ${original.id as string}
     ORDER BY position
