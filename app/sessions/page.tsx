@@ -1,6 +1,6 @@
 import { sql } from "@/lib/db";
 import Link from "next/link";
-import SessionsClient from "./SessionsClient";
+import SessionsList from "./SessionsList";
 import s from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -53,39 +53,7 @@ export default async function SessionsPage() {
           </div>
         </div>
 
-        {sessions.length === 0 ? (
-          <p className={s.empty}>Ingen sessioner endnu.</p>
-        ) : (
-          <div className={s.list}>
-            {sessions.map((sess) => (
-              <div key={sess.id} className={s.card}>
-                <div className={s.cardMain}>
-                  <div className={s.cardTitle}>{sess.title}</div>
-                  <div className={s.cardMeta}>
-                    <span className={`${s.stateBadge} ${sess.state === "active" ? s.stateActive : sess.state === "closed" ? s.stateClosed : s.stateLobby}`}>
-                      {sess.state === "active" ? "AKTIV" : sess.state === "closed" ? "LUKKET" : "LOBBY"}
-                    </span>
-                    <span className={s.dot2} />
-                    <span>{new Date(sess.created_at).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" })}</span>
-                    <span className={s.dot2} />
-                    <span>{sess.question_count} spørgsmål</span>
-                    <span className={s.dot2} />
-                    <span>{sess.response_count} svar</span>
-                    {sess.types.includes("wordcloud") && <span className={`${s.badge} ${s.badgeCloud}`}>ORDSKY</span>}
-                    {sess.types.includes("dilemma") && <span className={`${s.badge} ${s.badgeDilemma}`}>DILEMMA</span>}
-                    {sess.types.includes("scale") && <span className={`${s.badge} ${s.badgeScale}`}>SKALA</span>}
-                    {sess.types.includes("text") && <span className={`${s.badge} ${s.badgeText}`}>FRITEKST</span>}
-                    {sess.types.includes("ranking") && <span className={`${s.badge} ${s.badgeRanking}`}>RANGERING</span>}
-                  </div>
-                </div>
-                <div className={s.cardActions}>
-                  <Link href={`/report/${sess.code}`} className={s.btnSmallGhost}>Rapport</Link>
-                  <SessionsClient code={sess.code} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <SessionsList sessions={sessions} />
       </div>
     </main>
   );
