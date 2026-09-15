@@ -1,6 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import s from "./host.module.css";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -112,6 +127,33 @@ function CountdownBadge({ openedAt, durationSec }: { openedAt: string | null; du
 
 function sortedByPosition(qs: Question[]) {
   return [...qs].sort((a, b) => a.position - b.position);
+}
+
+/* ── Sortable spørgsmålskort (drag'n'drop) ────────────────────── */
+
+type SortableRenderProps = {
+  setNodeRef: (el: HTMLElement | null) => void;
+  style: React.CSSProperties;
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  isDragging: boolean;
+};
+
+function SortableQuestion({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: (p: SortableRenderProps) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return <>{children({ setNodeRef, style, attributes, listeners, isDragging })}</>;
 }
 
 /* ── Pill / badge ───────────────────────────────────────────── */
@@ -267,6 +309,37 @@ export default function HostClient({ code }: { code: string }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  /* ── Rækkefølge (drag'n'drop) ────────────────────────────── */
+
+  const dragSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  async function reorderQuestions(newOrder: Question[]) {
+    const withPositions = newOrder.map((q, i) => ({ ...q, position: i }));
+    setSession((s) => s ? { ...s, questions: withPositions } : s);
+    try {
+      await fetch(`/api/sessions/${code}/questions/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: withPositions.map((q) => q.id) }),
+      });
+    } catch {
+      // Næste poll retter det, hvis kaldet fejlede
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    if (!session) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const current = sortedByPosition(session.questions);
+    const oldIndex = current.findIndex((q) => q.id === active.id);
+    const newIndex = current.findIndex((q) => q.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    reorderQuestions(arrayMove(current, oldIndex, newIndex));
   }
 
   /* ── Edit / delete ───────────────────────────────────────── */
@@ -604,6 +677,8 @@ export default function HostClient({ code }: { code: string }) {
             </p>
           )}
 
+          <DndContext sensors={dragSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sorted.map((q) => q.id)} strategy={verticalListSortingStrategy}>
           <div className={s.qList}>
             {sorted.map((q, i) => {
               const isCurrent = q.id === session.current_question_id;
@@ -619,10 +694,13 @@ export default function HostClient({ code }: { code: string }) {
                 isCurrent && !q.is_open ? s.closedQ : "",
               ].join(" ");
 
+              return (
+              <SortableQuestion key={q.id} id={q.id} disabled={editingId === q.id}>
+                {({ setNodeRef, style, attributes, listeners, isDragging }) => {
               // ── Inline edit mode ──────────────────────────
               if (editingId === q.id) {
                 return (
-                  <div key={q.id} className={`${s.qCard} ${s.qCardEditing}`}>
+                  <div ref={setNodeRef} style={style} className={`${s.qCard} ${s.qCardEditing}`}>
                     <div className={numClass}>{i + 1}</div>
                     <div className={s.qBody}>
                       <textarea
@@ -741,7 +819,8 @@ export default function HostClient({ code }: { code: string }) {
 
               // ── Normal view ───────────────────────────────
               return (
-                <div key={q.id} className={cardClass}>
+                <div ref={setNodeRef} style={style} className={`${cardClass}${isDragging ? ` ${s.dragging}` : ""}`}>
+                  <span className={s.dragHandle} title="Træk for at ændre rækkefølge" {...attributes} {...listeners}>⠿</span>
                   <div className={numClass}>{i + 1}</div>
 
                   <div className={s.qBody}>
@@ -820,8 +899,13 @@ export default function HostClient({ code }: { code: string }) {
                   </div>
                 </div>
               );
+                }}
+              </SortableQuestion>
+              );
             })}
           </div>
+          </SortableContext>
+          </DndContext>
         </section>
 
         {/* ── Right: commands + add form ───────────────────── */}

@@ -167,6 +167,30 @@
   transition: border-color 0.15s;
 }
 
+.qCard.dragging {
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+  position: relative;
+}
+
+.dragHandle {
+  flex: 0 0 auto;
+  width: 20px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
+  font-size: 16px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:hover {
+  color: var(--muted);
+}
+
 .qCard.current {
   border-color: var(--c2);
   background: color-mix(in oklch, var(--c2) 5%, var(--panel));
