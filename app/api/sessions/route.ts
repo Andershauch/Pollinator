@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { logger } from "@/lib/log";
 
 // GET /api/sessions — liste over alle sessioner (til bank-drawer)
 export async function GET() {
@@ -30,6 +31,7 @@ function randomCode(): string {
 export async function POST(req: NextRequest) {
   const { title } = await req.json();
   if (!title?.trim()) {
+    logger.warn("session create: missing title");
     return NextResponse.json({ error: "title required" }, { status: 400 });
   }
 
@@ -42,12 +44,15 @@ export async function POST(req: NextRequest) {
         VALUES (${code}, ${title.trim()}, 'lobby')
         RETURNING *
       `;
+      logger.info("session created", { code, attempt });
       return NextResponse.json(rows[0], { status: 201 });
     } catch (err: unknown) {
       const pgErr = err as { code?: string };
       if (pgErr.code !== "23505") throw err; // kun retry på unique violation
+      logger.warn("session create: code collision, retrying", { code, attempt });
     }
   }
 
+  logger.error("session create: exhausted retries generating unique code");
   return NextResponse.json({ error: "could not generate unique code" }, { status: 500 });
 }

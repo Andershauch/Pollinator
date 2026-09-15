@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { logger } from "@/lib/log";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -25,6 +26,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   `;
 
   if (rows.length === 0) {
+    logger.warn("session get: not found", { code });
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
 
@@ -52,6 +54,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const hasState = "state" in body;
 
   if (!hasCqid && !hasState) {
+    logger.warn("session patch: no fields provided", { code });
     return NextResponse.json(
       { error: "provide state and/or current_question_id" },
       { status: 400 }
@@ -60,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   const VALID_STATES = ["lobby", "active", "closed"];
   if (hasState && !VALID_STATES.includes(body.state)) {
+    logger.warn("session patch: invalid state", { code, state: body.state });
     return NextResponse.json(
       { error: `state must be one of: ${VALID_STATES.join(", ")}` },
       { status: 400 }
@@ -93,6 +97,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   if (rows.length === 0) {
+    logger.warn("session patch: not found", { code });
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
 
@@ -112,5 +117,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
   }
 
+  logger.info("session patched", { code, state: body.state, current_question_id: body.current_question_id });
   return NextResponse.json(session);
 }

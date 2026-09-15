@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { logger } from "@/lib/log";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -12,9 +13,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   const needsOptions = qtype === "dilemma" || qtype === "ranking";
 
   if (!prompt?.trim()) {
+    logger.warn("question create: missing prompt", { code });
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
   }
   if (needsOptions && (!Array.isArray(options) || options.length === 0)) {
+    logger.warn("question create: missing options", { code, type: qtype });
     return NextResponse.json(
       { error: "options (non-empty array) required for dilemma/ranking questions" },
       { status: 400 }
@@ -25,6 +28,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     SELECT id FROM sessions WHERE code = ${code.toUpperCase()}
   `;
   if (sessions.length === 0) {
+    logger.warn("question create: session not found", { code });
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
 
@@ -58,5 +62,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     RETURNING *
   `;
 
+  logger.info("question created", { code, type: qtype, questionId: rows[0].id });
   return NextResponse.json(rows[0], { status: 201 });
 }

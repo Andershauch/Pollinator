@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
+import { logger } from "@/lib/log";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
       const pathname = (body?.payload?.pathname as string) || "upload";
       const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
       if (!blobToken) {
+        logger.error("upload: BLOB_READ_WRITE_TOKEN not configured");
         return NextResponse.json(
           { error: "BLOB_READ_WRITE_TOKEN er ikke konfigureret i Vercel-projektet" },
           { status: 500, headers: CORS }
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
           { headers: CORS }
         );
       } catch (err) {
-        console.error("blob.generate-client-token failed:", err);
+        logger.error("upload: blob.generate-client-token failed", { error: String(err) });
         return NextResponse.json(
           { error: "Kunne ikke generere upload-token" },
           { status: 500, headers: CORS }
@@ -55,16 +57,28 @@ export async function POST(req: NextRequest) {
   // Server-side upload (Apps Script → multipart form-data, for auto-detected slide images)
   const form = await req.formData();
   const file = form.get("file") as File | null;
-  if (!file) return NextResponse.json({ error: "file required" }, { status: 400 });
-  if (file.size > 50 * 1024 * 1024)
+  if (!file) {
+    logger.warn("upload: file required");
+    return NextResponse.json({ error: "file required" }, { status: 400 });
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    logger.warn("upload: file too large", { size: file.size });
     return NextResponse.json({ error: "Maks 50 MB" }, { status: 413 });
+  }
   const isVideo = file.type.startsWith("video/");
   const isImage = file.type.startsWith("image/");
-  if (!isVideo && !isImage)
+  if (!isVideo && !isImage) {
+    logger.warn("upload: unsupported file type", { type: file.type });
     return NextResponse.json(
       { error: "Kun billeder og videoer er tilladt" },
       { status: 415 }
     );
-  const blob = await put(file.name, file, { access: "public" });
-  return NextResponse.json({ url: blob.url, type: isVideo ? "video" : "image" });
+  }
+  try {
+    const blob = await put(file.name, file, { access: "public" });
+    return NextResponse.json({ url: blob.url, type: isVideo ? "video" : "image" });
+  } catch (err) {
+    logger.error("upload: blob put failed", { error: String(err) });
+    return NextResponse.json({ error: "Upload fejlede" }, { status: 500 });
+  }
 }

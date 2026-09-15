@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { logger } from "@/lib/log";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,15 +18,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       WHERE id = ${id}
       RETURNING *
     `;
-    if (rows.length === 0)
+    if (rows.length === 0) {
+      logger.warn("question is_open toggle: not found", { questionId: id });
       return NextResponse.json({ error: "question not found" }, { status: 404 });
+    }
     return NextResponse.json(rows[0]);
   }
 
   // Full edit: prompt + options + duration + media + scale_max
   const { prompt, options, duration_seconds, media_url, media_type, scale_max, type } = body;
-  if (!prompt?.trim())
+  if (!prompt?.trim()) {
+    logger.warn("question edit: missing prompt", { questionId: id });
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
+  }
 
   const safeOptions = Array.isArray(options) ? options : [];
   const dur = typeof duration_seconds === "number" && duration_seconds > 0
@@ -48,8 +53,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     WHERE id = ${id}
     RETURNING *
   `;
-  if (rows.length === 0)
+  if (rows.length === 0) {
+    logger.warn("question edit: not found", { questionId: id });
     return NextResponse.json({ error: "question not found" }, { status: 404 });
+  }
   return NextResponse.json(rows[0]);
 }
 
@@ -64,8 +71,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   await sql`DELETE FROM ranking_responses WHERE question_id = ${id}`;
 
   const rows = await sql`DELETE FROM questions WHERE id = ${id} RETURNING id`;
-  if (rows.length === 0)
+  if (rows.length === 0) {
+    logger.warn("question delete: not found", { questionId: id });
     return NextResponse.json({ error: "question not found" }, { status: 404 });
+  }
 
+  logger.info("question deleted", { questionId: id });
   return NextResponse.json({ deleted: id });
 }

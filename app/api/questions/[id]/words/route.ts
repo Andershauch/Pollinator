@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { normalizeWord } from "@/lib/aggregate";
+import { logger } from "@/lib/log";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { word, participant_key } = body;
 
   if (!word?.trim() || !participant_key) {
+    logger.warn("word: invalid payload", { questionId: id });
     return NextResponse.json(
       { error: "word and participant_key required" },
       { status: 400 }
@@ -34,9 +36,11 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const questions = await sql`SELECT is_open FROM questions WHERE id = ${id}`;
   if (questions.length === 0) {
+    logger.warn("word: question not found", { questionId: id });
     return NextResponse.json({ error: "question not found" }, { status: 404 });
   }
   if (!questions[0].is_open) {
+    logger.warn("word: question closed", { questionId: id });
     return NextResponse.json({ error: "question is closed" }, { status: 403 });
   }
 

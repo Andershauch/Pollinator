@@ -1,9 +1,11 @@
 import QRCode from "qrcode";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/log";
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
   if (!url) {
+    logger.warn("qr: missing url param");
     return new NextResponse("Missing url param", { status: 400 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { tallyDilemma, tallyScale, type VoteCount } from "@/lib/aggregate";
+import { logger } from "@/lib/log";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,6 +13,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     SELECT id, prompt, options, type, COALESCE(scale_max, 10) AS scale_max FROM questions WHERE id = ${id}
   `;
   if (questions.length === 0) {
+    logger.warn("results: question not found", { questionId: id });
     return NextResponse.json({ error: "question not found" }, { status: 404 });
   }
 
