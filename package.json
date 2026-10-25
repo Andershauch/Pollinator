@@ -11,9 +11,12 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@andershauch/auth": "0.1.0",
+    "@andershauch/mail": "0.1.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@neondatabase/auth": "0.7.0-beta",
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/blob": "^2.4.0",
     "canvas-confetti": "^1.9.4",
