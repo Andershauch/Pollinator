@@ -8,8 +8,8 @@ FROM base AS dependencies
 COPY package.json package-lock.json .npmrc ./
 # NPM_TOKEN is supplied as a BuildKit secret. It exists only while npm fetches
 # the two private GitHub Packages and is never copied into a layer or image.
-RUN --mount=type=secret,id=npm_token \
-  NPM_TOKEN="$(cat /run/secrets/npm_token)" npm ci
+RUN --mount=type=secret,id=NPM_TOKEN \
+  NPM_TOKEN="$(cat /run/secrets/NPM_TOKEN)" npm ci
 
 FROM base AS builder
 COPY --from=dependencies /app/node_modules ./node_modules
