@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 import s from "./sign-in.module.css";
 
@@ -22,8 +21,6 @@ export default function SignInForm() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
   function reset(next: Mode) {
     setMode(next);
     setError("");
@@ -34,15 +31,31 @@ export default function SignInForm() {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const { error: signInError } = await authClient.signIn.email({ email, password });
-    setLoading(false);
+    try {
+      const { data, error: signInError } = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/host",
+      });
 
-    if (signInError) {
+      if (signInError) {
+        setError(messageFrom(signInError));
+        return;
+      }
+
+      if (!data) {
+        setError("Login kunne ikke bekræftes. Prøv igen.");
+        return;
+      }
+
+      // A full navigation ensures the newly issued session cookie is included
+      // when the protected host area is loaded for the first time.
+      window.location.assign("/host");
+    } catch (signInError) {
       setError(messageFrom(signInError));
-      return;
+    } finally {
+      setLoading(false);
     }
-    router.replace("/host");
-    router.refresh();
   }
 
   async function signUp(event: React.FormEvent<HTMLFormElement>) {
