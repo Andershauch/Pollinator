@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { logger } from "@/lib/log";
+import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
 // GET /api/sessions — liste over alle sessioner (til bank-drawer)
 export async function GET() {
+  const unauthorised = await requireFacilitator();
+  if (unauthorised) return unauthorised;
   const rows = await sql`
     SELECT
       s.id, s.code, s.title, s.created_at,
@@ -29,6 +32,8 @@ function randomCode(): string {
 
 // POST /api/sessions — opret ny session (facilitator)
 export async function POST(req: NextRequest) {
+  const unauthorised = await requireFacilitator();
+  if (unauthorised) return unauthorised;
   const { title } = await req.json();
   if (!title?.trim()) {
     logger.warn("session create: missing title");

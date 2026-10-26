@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { logger } from "@/lib/log";
+import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
 type Params = { params: Promise<{ code: string }> };
 
 // POST /api/sessions/[code]/reset — nulstil alle svar, behold kode/spørgsmål/medier
 export async function POST(_req: NextRequest, { params }: Params) {
+  const unauthorised = await requireFacilitator();
+  if (unauthorised) return unauthorised;
   const { code } = await params;
 
   const sessions = await sql`SELECT id FROM sessions WHERE code = ${code.toUpperCase()}`;

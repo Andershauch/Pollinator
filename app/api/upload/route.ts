@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { logger } from "@/lib/log";
+import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorised = await requireFacilitator();
+  if (unauthorised) return unauthorised;
   const contentType = req.headers.get("content-type") ?? "";
 
   if (contentType.includes("application/json")) {

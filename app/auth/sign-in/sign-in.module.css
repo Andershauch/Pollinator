@@ -1,0 +1,16 @@
+.page { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #111319; color: #f4f5f8; font-family: var(--oswald), system-ui, sans-serif; }
+.card { width: min(100%, 420px); padding: 36px; border: 1px solid #343946; border-radius: 18px; background: #1a1d25; box-shadow: 0 24px 80px rgb(0 0 0 / 30%); }
+.brand { display: flex; align-items: center; gap: 8px; letter-spacing: .12em; font-size: 14px; font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; }
+.card h1 { margin: 28px 0 8px; font-size: 32px; }
+.intro { margin: 0 0 24px; color: #afb5c2; font-family: system-ui, sans-serif; line-height: 1.5; }
+.form { display: grid; gap: 16px; }
+.form label { display: grid; gap: 7px; font-size: 15px; }
+.form input { width: 100%; box-sizing: border-box; border: 1px solid #4b5262; border-radius: 8px; padding: 12px; background: #111319; color: inherit; font: inherit; }
+.form button { border: 0; border-radius: 8px; padding: 13px; background: #f59e0b; color: #111319; font: inherit; font-weight: 700; cursor: pointer; }
+.form button:disabled { opacity: .65; cursor: wait; }
+.switcher { margin-top: 20px; text-align: center; }
+.switcher button { border: 0; padding: 0; background: transparent; color: #f7b53b; font: inherit; cursor: pointer; text-decoration: underline; }
+.error, .notice { margin: 0 0 16px; padding: 10px 12px; border-radius: 8px; font-family: system-ui, sans-serif; font-size: 14px; }
+.error { background: #4a2028; color: #ffd7dc; }
+.notice { background: #163a33; color: #cbfaeb; }

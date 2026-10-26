@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { logger } from "@/lib/log";
+import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
 type Params = { params: Promise<{ code: string }> };
 
 // POST /api/sessions/[code]/questions/reorder — opdater rækkefølgen af spørgsmål
 export async function POST(req: NextRequest, { params }: Params) {
+  const unauthorised = await requireFacilitator();
+  if (unauthorised) return unauthorised;
   const { code } = await params;
   const { order } = await req.json();
 

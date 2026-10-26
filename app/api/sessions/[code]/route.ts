@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { logger } from "@/lib/log";
+import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -47,6 +48,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 // PATCH /api/sessions/[code] — skift state og/eller current_question_id
 export async function PATCH(req: NextRequest, { params }: Params) {
+  const unauthorised = await requireFacilitator();
+  if (unauthorised) return unauthorised;
   const { code } = await params;
   const body = await req.json();
 

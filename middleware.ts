@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuth } from "@/lib/auth/server";
 
-export function middleware(req: NextRequest) {
+const protectedPagePaths = ["/host", "/sessions", "/questions"];
+
+export async function middleware(req: NextRequest) {
+  if (protectedPagePaths.some((path) => req.nextUrl.pathname === path || req.nextUrl.pathname.startsWith(`${path}/`))) {
+    return getAuth().middleware({ loginUrl: "/auth/sign-in" })(req);
+  }
+
   // Preflight
   if (req.method === "OPTIONS") {
     return new NextResponse(null, {
@@ -21,5 +28,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/:path*",
+  matcher: ["/api/:path*", "/host/:path*", "/sessions/:path*", "/questions/:path*"],
 };
