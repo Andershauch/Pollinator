@@ -7,7 +7,7 @@ type Params = { params: Promise<{ code: string }> };
 
 // POST /api/sessions/[code]/questions — tilføj spørgsmål
 export async function POST(req: NextRequest, { params }: Params) {
-  const unauthorised = await requireFacilitator();
+  const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
   if (unauthorised) return unauthorised;
   const { code } = await params;
   const { prompt, options, position, duration_seconds, type, media_url, media_type, scale_max } = await req.json();

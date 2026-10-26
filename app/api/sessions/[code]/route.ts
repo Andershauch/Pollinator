@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 // PATCH /api/sessions/[code] — skift state og/eller current_question_id
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const unauthorised = await requireFacilitator();
+  const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
   if (unauthorised) return unauthorised;
   const { code } = await params;
   const body = await req.json();

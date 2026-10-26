@@ -264,7 +264,7 @@
 </div>
 
 <script>
-  const BASE = "https://pollinator-nine.vercel.app";
+  const BASE = "https://staging.pollinator.hansendjurhuus.dk";
   const COLORS = ["#f59e0b", "#34d399", "#60a5fa", "#f472b6", "#a78bfa"];
 
   let session = null;
@@ -317,23 +317,11 @@
       const btn = document.getElementById("mediabtn-" + qId);
       if (btn) btn.textContent = "⏳";
       try {
-        // Step 1: get a signed client token from our server
-        const tokenRes = await fetch(BASE + "/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "blob.generate-client-token",
-            payload: {
-              pathname: file.name,
-              callbackUrl: BASE + "/api/upload",
-              multipart: false,
-              clientPayload: null,
-            },
-          }),
-        });
-        const tokenData = await tokenRes.json();
+        // Step 1: Apps Script retrieves a signed client token without exposing
+        // the integration key to this sidebar.
+        const tokenData = JSON.parse(await gsRun("getUploadClientToken", file.name));
         const clientToken = tokenData.clientToken;
-        if (!clientToken) throw new Error("Token fejl (HTTP " + tokenRes.status + "): " + JSON.stringify(tokenData));
+        if (!clientToken) throw new Error("Token fejl: " + JSON.stringify(tokenData));
 
         // Step 2: PUT directly to Vercel Blob API — ingen 4.5 MB serverless-grænse
         const params = new URLSearchParams({ pathname: file.name });

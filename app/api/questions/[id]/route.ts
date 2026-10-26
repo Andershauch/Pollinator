@@ -7,7 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 
 // PATCH /api/questions/[id] — opdater is_open, prompt, options eller duration
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const unauthorised = await requireFacilitator();
+  const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
   if (unauthorised) return unauthorised;
   const { id } = await params;
   const body = await req.json();
@@ -65,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 // DELETE /api/questions/[id] — slet spørgsmål
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const unauthorised = await requireFacilitator();
+  const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
   if (unauthorised) return unauthorised;
   const { id } = await params;
 

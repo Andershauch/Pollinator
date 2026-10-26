@@ -8,7 +8,7 @@
 //
 // Slides UDEN en anerkendt type i notes springes over.
 
-const POLLINATOR_URL = "https://pollinator.hansendjurhuus.dk";
+const POLLINATOR_URL = "https://staging.pollinator.hansendjurhuus.dk";
 
 // Virker både som bound script og som installeret add-on
 function onOpen(e) {
@@ -318,12 +318,44 @@ function uploadMediaFile(base64Data, mimeType, filename) {
   const res   = UrlFetchApp.fetch(POLLINATOR_URL + "/api/upload", {
     method:           "post",
     payload:          { file: blob },
+    headers:          _pollinatorHeaders(),
     muteHttpExceptions: true,
   });
   return res.getContentText();
 }
 
+function getUploadClientToken(filename) {
+  const response = UrlFetchApp.fetch(POLLINATOR_URL + "/api/upload", {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify({
+      type: "blob.generate-client-token",
+      payload: {
+        pathname: filename,
+        callbackUrl: POLLINATOR_URL + "/api/upload",
+        multipart: false,
+        clientPayload: null,
+      },
+    }),
+    headers: _pollinatorHeaders(),
+    muteHttpExceptions: true,
+  });
+
+  if (response.getResponseCode() !== 200) {
+    throw new Error("Kunne ikke hente upload-token (HTTP " + response.getResponseCode() + ")");
+  }
+  return response.getContentText();
+}
+
 // ── API-proxies via UrlFetchApp ───────────────────────────────────────────────
+
+function _pollinatorHeaders() {
+  const token = PropertiesService.getScriptProperties().getProperty("POLLINATOR_SLIDES_API_TOKEN");
+  if (!token) {
+    throw new Error("Mangler Pollinator Slides-nøgle i Script Properties.");
+  }
+  return { Authorization: "Bearer " + token };
+}
 
 function apiGet(path) {
   return UrlFetchApp.fetch(POLLINATOR_URL + path, { muteHttpExceptions: true }).getContentText();
@@ -332,20 +364,20 @@ function apiGet(path) {
 function apiPost(path, bodyJson) {
   return UrlFetchApp.fetch(POLLINATOR_URL + path, {
     method: "post", contentType: "application/json",
-    payload: bodyJson || "{}", muteHttpExceptions: true,
+    payload: bodyJson || "{}", headers: _pollinatorHeaders(), muteHttpExceptions: true,
   }).getContentText();
 }
 
 function apiPatch(path, bodyJson) {
   return UrlFetchApp.fetch(POLLINATOR_URL + path, {
     method: "patch", contentType: "application/json",
-    payload: bodyJson || "{}", muteHttpExceptions: true,
+    payload: bodyJson || "{}", headers: _pollinatorHeaders(), muteHttpExceptions: true,
   }).getContentText();
 }
 
 function apiDelete(path) {
   return UrlFetchApp.fetch(POLLINATOR_URL + path, {
-    method: "delete", muteHttpExceptions: true,
+    method: "delete", headers: _pollinatorHeaders(), muteHttpExceptions: true,
   }).getContentText();
 }
 

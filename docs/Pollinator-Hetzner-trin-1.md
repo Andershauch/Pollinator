@@ -67,7 +67,6 @@ eksisterende medier og ændring af direkte Blob-upload i Google Slides.
 | Integration | Hvad den bruger | Hvad der skal ændres ved domæneskift |
 | --- | --- | --- |
 | Google Slides | Pollinator-API, QR-endpoint og Vercel Blob-upload | `BASE` er stadig sat til Vercels standarddomæne; skift til staging/live-domæne efter test |
-| Google Sheets | Pollinator-API | `BASE` er stadig sat til Vercels standarddomæne; skift til staging/live-domæne efter test |
 | Google Apps Script (serverdel) | `https://pollinator.hansendjurhuus.dk` | Beholdes, hvis live-domænet flyttes DNS-mæssigt til Hetzner |
 | Browser-klienter | Relative `/api/...`-kald | Ingen ændring ved beholdt live-domæne |
 | QR-koder | `https://pollinator.hansendjurhuus.dk` | Beholdes, hvis live-domænet bevares |

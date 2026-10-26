@@ -32,7 +32,7 @@ function randomCode(): string {
 
 // POST /api/sessions — opret ny session (facilitator)
 export async function POST(req: NextRequest) {
-  const unauthorised = await requireFacilitator();
+  const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
   if (unauthorised) return unauthorised;
   const { title } = await req.json();
   if (!title?.trim()) {
