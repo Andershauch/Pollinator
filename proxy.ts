@@ -4,7 +4,7 @@ import { applySecurityHeaders } from "@/lib/security";
 
 const protectedPagePaths = ["/host", "/sessions", "/questions", "/report"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const isProtectedPage = protectedPagePaths.some(
     (path) => req.nextUrl.pathname === path || req.nextUrl.pathname.startsWith(`${path}/`)
   );
