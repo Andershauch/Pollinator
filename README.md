@@ -56,6 +56,25 @@ repository `Dockerfile`.
 4. If the release fails, use Coolify's Rollback view to restore the previous
    successful deployment.
 
+### What is backed up where
+
+Pollinator has no Coolify persistent volume: the running container is
+replaceable and its backup schedule must remain empty. The durable data lives
+in Neon Postgres, while the deployable application is stored in GitHub.
+
+Before a database migration or other destructive data operation:
+
+1. Create or verify a Neon branch/snapshot of production.
+2. Run the change on that branch first and check the app there.
+3. Record the production commit and the Neon recovery point before applying
+   the production change.
+4. If an application release is bad, roll back in Coolify. If data is bad,
+   stop the write operation and recover using the pre-change Neon recovery
+   point; a Coolify rollback alone does not restore database data.
+
+Coolify should have an e-mail notification channel for failed deployments and
+unhealthy resources. It is an operational alert, not a data backup.
+
 GitHub Actions runs type checking, tests, and a production build for pushes and
 pull requests. The local pre-push check intentionally runs only type checking
 and tests to keep normal commits quick.
