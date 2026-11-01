@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // Client upload: generate a signed token for direct browser → Vercel Blob upload
     if (body?.type === "blob.generate-client-token") {
-      const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
+      const unauthorised = await requireFacilitator();
       if (unauthorised) return unauthorised;
 
       const pathname = (body?.payload?.pathname as string) || "upload";
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Server-side upload (Apps Script → multipart form-data, for auto-detected slide images)
-  const unauthorised = await requireFacilitator({ allowSlidesIntegration: true });
+  const unauthorised = await requireFacilitator();
   if (unauthorised) return unauthorised;
 
   const form = await req.formData();

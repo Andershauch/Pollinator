@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import Link from "next/link";
 import SessionsList from "./SessionsList";
+import { requireFacilitatorPage } from "@/lib/auth/require-facilitator";
 import s from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ type SessionRow = {
 };
 
 export default async function SessionsPage() {
+  await requireFacilitatorPage();
   const rows = await sql`
     SELECT
       s.id, s.code, s.title, s.created_at, s.state,

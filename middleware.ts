@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth/server";
 
-const protectedPagePaths = ["/host", "/sessions", "/questions"];
+const protectedPagePaths = ["/host", "/sessions", "/questions", "/report"];
 
 export async function middleware(req: NextRequest) {
   if (protectedPagePaths.some((path) => req.nextUrl.pathname === path || req.nextUrl.pathname.startsWith(`${path}/`))) {
@@ -28,5 +28,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/host/:path*", "/sessions/:path*", "/questions/:path*"],
+  matcher: ["/api/:path*", "/host/:path*", "/sessions/:path*", "/questions/:path*", "/report/:path*"],
 };

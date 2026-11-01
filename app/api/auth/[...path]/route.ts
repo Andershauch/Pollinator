@@ -7,6 +7,10 @@ export async function GET(request: Request, context: Context) {
 }
 
 export async function POST(request: Request, context: Context) {
+  const { path } = await context.params;
+  if (path[0] === "sign-up") {
+    return Response.json({ error: "Værtskonti oprettes af administratoren" }, { status: 403 });
+  }
   return getAuth().handler().POST(request, context);
 }
 

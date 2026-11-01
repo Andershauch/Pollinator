@@ -1,10 +1,14 @@
 import { sql } from "@/lib/db";
 import { tallyDilemma, tallyScale, tallyRanking, type VoteCount } from "@/lib/aggregate";
 import ReportClient from "./ReportClient";
+import { requireFacilitatorPage } from "@/lib/auth/require-facilitator";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ code: string }> };
 
 export default async function ReportPage({ params }: Props) {
+  await requireFacilitatorPage();
   const { code } = await params;
   const upper = code.toUpperCase();
 
