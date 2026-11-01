@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,6 +17,9 @@ jobs:
       # Build never actually connects — every DB-querying page is force-dynamic,
       # so neon() only needs a syntactically valid string at build time.
       DATABASE_URL: postgresql://user:pass@example.com/db
+      # GitHub's short-lived workflow token installs the private @andershauch
+      # packages. Package access is granted directly to this repository.
+      NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
