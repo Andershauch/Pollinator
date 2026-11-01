@@ -1,32 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth/server";
+import { applySecurityHeaders } from "@/lib/security";
 
 const protectedPagePaths = ["/host", "/sessions", "/questions", "/report"];
 
 export async function middleware(req: NextRequest) {
-  if (protectedPagePaths.some((path) => req.nextUrl.pathname === path || req.nextUrl.pathname.startsWith(`${path}/`))) {
-    return getAuth().middleware({ loginUrl: "/auth/sign-in" })(req);
-  }
+  const isProtectedPage = protectedPagePaths.some(
+    (path) => req.nextUrl.pathname === path || req.nextUrl.pathname.startsWith(`${path}/`)
+  );
 
-  // Preflight
-  if (req.method === "OPTIONS") {
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
-  }
+  const response = isProtectedPage
+    ? await getAuth().middleware({ loginUrl: "/auth/sign-in" })(req)
+    : NextResponse.next();
 
-  const res = NextResponse.next();
-  res.headers.set("Access-Control-Allow-Origin", "*");
-  res.headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-  res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  return res;
+  applySecurityHeaders(response.headers, {
+    noStore: req.nextUrl.pathname.startsWith("/api/") || isProtectedPage || req.nextUrl.pathname.startsWith("/auth/"),
+  });
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/host/:path*", "/sessions/:path*", "/questions/:path*", "/report/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

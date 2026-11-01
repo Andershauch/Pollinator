@@ -5,6 +5,11 @@ import { logger } from "@/lib/log";
 import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
 export async function POST(req: NextRequest) {
+  const contentLength = Number(req.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > 50 * 1024 * 1024) {
+    return NextResponse.json({ error: "Maks 50 MB" }, { status: 413 });
+  }
+
   const contentType = req.headers.get("content-type") ?? "";
 
   if (contentType.includes("application/json")) {

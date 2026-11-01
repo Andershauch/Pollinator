@@ -4,8 +4,8 @@ import { sql } from "@/lib/db";
 // GET /api/healthz — bekræft DB-forbindelse
 export async function GET() {
   try {
-    const rows = await sql`SELECT current_database() AS db, now() AS ts`;
-    return NextResponse.json({ ok: true, ...rows[0] });
+    await sql`SELECT 1`;
+    return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 503 });
   }

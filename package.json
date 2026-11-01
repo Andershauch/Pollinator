@@ -18,10 +18,10 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@neondatabase/auth": "0.7.0-beta",
     "@neondatabase/serverless": "^0.10.4",
-    "@vercel/blob": "^2.4.0",
+    "@vercel/blob": "2.4.0",
     "canvas-confetti": "^1.9.4",
     "d3-cloud": "^1.2.9",
-    "next": "^16.2.7",
+    "next": "16.4.3",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
@@ -36,9 +36,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.3.3",
+    "eslint-config-next": "16.4.3",
     "husky": "^9.1.7",
     "typescript": "^5",
     "vitest": "^2.1.9"
+  },
+  "overrides": {
+    "source-map-js": "1.2.2",
+    "undici": "6.29.1"
   }
 }
