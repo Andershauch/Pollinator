@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/lib/auth/client";
+import Link from "next/link";
 import s from "./sign-in.module.css";
 
 function messageFrom(error: unknown) {
@@ -67,6 +68,9 @@ export default function SignInForm() {
           </label>
           <button type="submit" disabled={loading}>{loading ? "Vent…" : "Log ind"}</button>
         </form>
+        <div className={s.switcher}>
+          <Link href="/auth/forgot-password">Glemt adgangskode?</Link>
+        </div>
       </section>
     </main>
   );
