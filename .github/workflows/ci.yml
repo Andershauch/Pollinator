@@ -29,4 +29,6 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test
-      - run: npm run build
+      # Turbopack's Google-font resolver is unreliable on GitHub-hosted runners.
+      # Production keeps its normal Coolify build; CI uses the stable Webpack path.
+      - run: npm run build -- --webpack
