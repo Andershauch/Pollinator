@@ -27,6 +27,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run db:migrate:check
       - run: npx tsc --noEmit
       - run: npm test
       # Turbopack's Google-font resolver is unreliable on GitHub-hosted runners.

@@ -1,3 +1,5 @@
+-- Legacy schema snapshot. Do not apply this file to production.
+-- New database changes belong in db/migrations/ and run via scripts/migrate.mjs.
 -- Workshop session
 CREATE TABLE IF NOT EXISTS sessions (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -33,15 +33,21 @@ For local development, run `npm run dev`.
 
 ## Database changes
 
-The current schema is `db/schema.sql`. Apply it deliberately with a production
-`DATABASE_URL` only after testing on a Neon branch:
+Database changes live in `db/migrations/` and run once, in version order. Apply
+them deliberately with a production `DATABASE_URL` only after testing on a
+Neon branch:
 
 ```bash
-node scripts/migrate.mjs
+npm run db:migrate
 ```
 
+Use `npm run db:migrate:check` in CI or before review to validate the migration
+inventory without connecting to a database. The first production run records
+the existing Pollinator schema as migration `001`; it does not reapply it.
+
 The script has no automatic rollback. Take or verify a Neon branch/backup
-before any schema change.
+before any schema change. Never edit an applied migration: create the next
+numbered file instead.
 
 ## Deployment and recovery
 
