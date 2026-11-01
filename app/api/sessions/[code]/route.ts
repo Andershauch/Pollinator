@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const rows = await sql`
     SELECT
       s.*,
-      COALESCE(json_agg(q.* ORDER BY q.position) FILTER (WHERE q.id IS NOT NULL), '[]') AS questions
+      COALESCE(json_agg(q.* ORDER BY q.position, q.id) FILTER (WHERE q.id IS NOT NULL), '[]') AS questions
     FROM sessions s
     LEFT JOIN questions q ON q.session_id = s.id
     WHERE s.code = ${code.toUpperCase()}

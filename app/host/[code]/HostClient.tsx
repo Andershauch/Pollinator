@@ -318,16 +318,24 @@ export default function HostClient({ code }: { code: string }) {
   );
 
   async function reorderQuestions(newOrder: Question[]) {
+    const previousOrder = session?.questions;
     const withPositions = newOrder.map((q, i) => ({ ...q, position: i }));
     setSession((s) => s ? { ...s, questions: withPositions } : s);
+    setError("");
     try {
-      await fetch(`/api/sessions/${code}/questions/reorder`, {
+      const res = await fetch(`/api/sessions/${code}/questions/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ order: withPositions.map((q) => q.id) }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setSession((s) => s ? { ...s, questions: previousOrder ?? s.questions } : s);
+        setError(data?.error ?? "Kunne ikke gemme rækkefølgen");
+      }
     } catch {
-      // Næste poll retter det, hvis kaldet fejlede
+      setSession((s) => s ? { ...s, questions: previousOrder ?? s.questions } : s);
+      setError("Netværksfejl: rækkefølgen blev ikke gemt");
     }
   }
 
