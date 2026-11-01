@@ -4,16 +4,6 @@ import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { logger } from "@/lib/log";
 import { requireFacilitator } from "@/lib/auth/require-facilitator";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS });
-}
-
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get("content-type") ?? "";
 
@@ -31,7 +21,7 @@ export async function POST(req: NextRequest) {
         logger.error("upload: BLOB_READ_WRITE_TOKEN not configured");
         return NextResponse.json(
           { error: "BLOB_READ_WRITE_TOKEN er ikke konfigureret i Vercel-projektet" },
-          { status: 500, headers: CORS }
+          { status: 500 }
         );
       }
       try {
@@ -43,22 +33,22 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json(
           { type: "blob.generate-client-token", clientToken },
-          { headers: CORS }
+          {}
         );
       } catch (err) {
         logger.error("upload: blob.generate-client-token failed", { error: String(err) });
         return NextResponse.json(
           { error: "Kunne ikke generere upload-token" },
-          { status: 500, headers: CORS }
+          { status: 500 }
         );
       }
     }
 
     // Vercel Blob callback after upload completes (no-op for us)
-    return NextResponse.json({ ok: true }, { headers: CORS });
+    return NextResponse.json({ ok: true });
   }
 
-  // Server-side upload (Apps Script → multipart form-data, for auto-detected slide images)
+  // Server-side uploads are restricted to signed-in facilitators.
   const unauthorised = await requireFacilitator();
   if (unauthorised) return unauthorised;
 

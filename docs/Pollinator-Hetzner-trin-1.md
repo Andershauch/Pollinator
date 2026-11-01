@@ -11,8 +11,8 @@ Det gør flytningen reversibel og undgår en samtidig dataflytning. Vercel skal
 blive stående som rollback-mulighed, indtil staging og production på Hetzner er
 testet.
 
-Vercel Blob kan erstattes senere, men det er et selvstændigt arbejde: både den
-almindelige app og Google Slides-tilføjelsen bruger det direkte.
+Vercel Blob kan erstattes senere, men det er et selvstændigt arbejde, da den
+almindelige app bruger det direkte.
 
 ## Repository og drift i dag
 
@@ -55,25 +55,20 @@ forskel.
 - Appen bruger `BLOB_READ_WRITE_TOKEN`; upload-endpointet udsteder tidsbegrænset
   klientadgang til upload.
 - Den almindelige app kan uploade op til 200 MB direkte til Blob.
-- Google Slides-tilføjelsen uploader også direkte til
-  `https://vercel.com/api/blob/` efter at have fået en klienttoken fra appen.
 
 Ved første Hetzner-release fortsætter den nye app derfor med den samme
 `BLOB_READ_WRITE_TOKEN`. En senere filflytning kræver både kopiering af de
-eksisterende medier og ændring af direkte Blob-upload i Google Slides.
+eksisterende medier og ændring af direkte Blob-upload i appen.
 
 ## Integrationer og URLs
 
 | Integration | Hvad den bruger | Hvad der skal ændres ved domæneskift |
 | --- | --- | --- |
-| Google Slides | Pollinator-API, QR-endpoint og Vercel Blob-upload | `BASE` er stadig sat til Vercels standarddomæne; skift til staging/live-domæne efter test |
-| Google Apps Script (serverdel) | `https://pollinator.hansendjurhuus.dk` | Beholdes, hvis live-domænet flyttes DNS-mæssigt til Hetzner |
 | Browser-klienter | Relative `/api/...`-kald | Ingen ændring ved beholdt live-domæne |
 | QR-koder | `https://pollinator.hansendjurhuus.dk` | Beholdes, hvis live-domænet bevares |
 
-Appen har bred CORS på sine API-ruter, da Apps Script-integrationen kalder den
-fra Google. Det skal bevares eller erstattes af en eksplicit tilladelsesliste,
-når integrationerne er testet fra staging.
+Appens API-ruter er kun beregnet til den samme Pollinator-app og kræver ikke
+åben CORS-adgang.
 
 ## Auth og e-mail
 
@@ -85,7 +80,7 @@ Pollinator skal bruge de fælles pakker, der allerede er vedligeholdt i de
 separate projekter:
 
 - **`@andershauch/auth`** fra `Auth Plugin`: ensartet Neon Auth-integration
-  med e-mail/password, verificering, password-reset, Google-login og
+  med e-mail/password, verificering, password-reset og
   server-side sessions.
 - **`@andershauch/mail`** fra `SMTP Plugin`: ensartet afsendelse af
   Pollinators egne transaktionelle e-mails via Resend og
@@ -101,7 +96,7 @@ brugerkonti, sessions eller passwords at migrere.
 
 Før trin 2 skal denne produktbeslutning være eksplicit: Auth skal beskytte
 facilitator-/admin-adgang, men deltagelse med sessionskode skal fortsat være
-uden login. Offentlig tilmelding, invitationer, Google-login og e-mailflow kan
+uden login. Offentlig tilmelding, invitationer og e-mailflow kan
 holdes ude af den første Hetzner-release, medmindre de ønskes som et samlet
 feature-release.
 
