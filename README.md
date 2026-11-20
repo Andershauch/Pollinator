@@ -87,7 +87,9 @@ and tests to keep normal commits quick.
 
 ## Operations
 
-- Production health endpoint: `/api/healthz`.
+- Production health endpoint: `/api/healthz` (liveness only — it must not
+  query Neon, or the 30s Docker healthcheck keeps the compute awake 24/7 and
+  exhausts the free-plan quota). Use `/api/healthz?db=1` for a manual DB check.
 - Browser/API protections are set in `proxy.ts`; same-origin access is
   intentional, and no API uses open CORS.
 - The app uses Neon Postgres, Neon Auth, Vercel Blob, and Resend through the
